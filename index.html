@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>酒店人员配置预测小程序 - 简单数据分析模块</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #2E86AB;
+      --primary-active: #1E6B91;
+      --complex: #F18F01;
+      --complex-active: #D47A00;
+      --annual: #43AA8B;
+      --annual-active: #35886C;
+      --warning: #C73E1D;
+      --text: #333;
+      --body: #666;
+      --border: #d7dee8;
+      --head-bg: #e8eef6;
+      --selected-col: #dbeafe;
+      --odd: #ffffff;
+      --even: #f3f6fa;
+      --warning-cell: #ffe7d6;
+      --success: #16a34a;
+      --disabled: #cbd5e1;
+      --panel-bg: #f4f7fb;
+      --subpanel-bg: #eef3f8;
+      --table-bg: #edf2f7;
+      --equation-bg: #edf4fb;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0 20px 20px;
+      font-family: "Microsoft YaHei", sans-serif;
+      background: #fff;
+      color: var(--text);
+      min-width: 1366px;
+    }
+
+    .nav-bar {
+      height: 60px;
+      display: grid;
+      grid-template-columns: 20% 60% 20%;
+      align-items: center;
+    }
+
+    .nav-center {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+    }
+
+    .nav-btn {
+      width: 150px;
+      height: 40px;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+
+    .nav-btn:hover { filter: brightness(0.98); }
+    .nav-btn.primary { background: var(--primary); box-shadow: 0 4px 0 #ddd, 0 6px 8px rgba(0,0,0,0.1); }
+    .nav-btn.primary.active { background: var(--primary-active); box-shadow: 0 2px 0 #ddd, 0 3px 4px rgba(0,0,0,0.1); transform: translateY(2px); }
+    .nav-btn.complex { background: var(--complex); box-shadow: 0 4px 0 #ddd, 0 6px 8px rgba(0,0,0,0.1); }
+    .nav-btn.annual { background: var(--annual); box-shadow: 0 4px 0 #ddd, 0 6px 8px rgba(0,0,0,0.1); }
+    .active-bar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 4px;
+      height: 2px;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .toast {
+      position: fixed;
+      top: 72px;
+      right: 24px;
+      z-index: 99;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--warning); }
+    .toast.warning { background: var(--complex); }
+
+    .main-wrap {
+      margin-top: 20px;
+      min-height: calc(100vh - 160px);
+      display: grid;
+      grid-template-columns: 40% 60%;
+      gap: 20px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 15px;
+      background: var(--panel-bg);
+    }
+
+    .left-panel {
+      min-height: 620px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .right-panel {
+      min-height: 620px;
+      display: grid;
+      grid-template-rows: 40% 60%;
+      gap: 15px;
+    }
+
+    .section-top {
+      min-height: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .target-line {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--primary);
+    }
+
+    .file-badge {
+      font-size: 12px;
+      color: var(--body);
+      background: #f3f4f6;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn-sm {
+      height: 32px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary-sm {
+      width: 100px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-outline-sm {
+      width: 140px;
+      border: 1px solid var(--primary);
+      background: #fff;
+      color: var(--primary);
+    }
+
+    .table-scroll {
+      flex: 0 0 auto;
+      width: 100%;
+      height: 480px;
+      overflow-x: auto;
+      overflow-y: auto;
+      border: 1px solid #c8d3e1;
+      border-radius: 10px;
+      background: var(--table-bg);
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    th, td {
+      border: 1px solid #cfd8e3;
+      min-width: 80px;
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--head-bg);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 8px;
+      vertical-align: top;
+    }
+
+    td {
+      color: var(--body);
+      font-size: 13px;
+      padding: 10px 8px;
+    }
+
+    tbody tr:nth-child(odd) td { background: var(--odd); }
+    tbody tr:nth-child(even) td { background: var(--even); }
+    .selected-col { background: var(--selected-col) !important; }
+    .warning-cell { background: var(--warning-cell) !important; }
+    .header-meta { font-size: 12px; color: var(--body); margin-top: 4px; }
+    .header-fix { font-size: 12px; color: #9ca3af; margin-top: 3px; }
+    .th-inner { display: flex; align-items: center; gap: 6px; }
+    .empty-cell { text-align: center; color: var(--body); font-size: 14px; padding: 30px; }
+
+    .sub-panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      overflow: hidden;
+      background: var(--subpanel-bg);
+    }
+
+    .title-line {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      padding-bottom: 12px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .equation-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .equation-box {
+      width: 100%;
+      height: 140px;
+      min-height: 140px;
+      max-height: 140px;
+      padding: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: var(--equation-bg);
+      border: 1px solid #c7d6e6;
+      border-radius: 10px;
+    }
+
+    .equation-wrap {
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 8px 10px;
+      width: 100%;
+      min-height: 100%;
+      padding: 16px 18px;
+      text-align: left;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.7;
+      word-break: break-word;
+      overflow: visible;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+    }
+
+    .equation-y { color: var(--primary); }
+    .equation-intercept { color: var(--warning); margin-left: 10px; }
+    .equation-op { color: var(--text); margin: 0 10px; }
+    .equation-coef { color: var(--annual); }
+
+    .equation-fit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      max-width: 100%;
+      transform-origin: left top;
+      transition: transform 0.15s ease;
+    }
+
+    .equation-info-box {
+      width: 100%;
+      height: 270px;
+      min-height: 270px;
+      max-height: 270px;
+      padding: 12px 14px;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      scrollbar-gutter: stable;
+      background: #ffffff;
+      border: 1px solid #d5deea;
+      border-radius: 10px;
+    }
+
+    .equation-guide {
+      font-size: 14px;
+      color: var(--body);
+      line-height: 1.8;
+      text-align: left;
+      margin-bottom: 10px;
+    }
+
+    .explain-text-wrap {
+      width: 100%;
+      overflow: visible;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+    }
+
+    .explain-text {
+      font-size: 14px;
+      color: var(--body);
+      line-height: 1.8;
+      width: 100%;
+      text-align: left;
+      transform: none !important;
+      transform-origin: left top;
+      transition: none;
+    }
+
+    .warning-box {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--complex);
+      background: #FFF7ED;
+      border: 1px solid #FED7AA;
+      border-radius: 8px;
+      padding: 10px;
+      line-height: 1.6;
+      max-height: 72px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex-shrink: 0;
+    }
+
+    .equation-box::-webkit-scrollbar,
+    .equation-info-box::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .equation-box::-webkit-scrollbar-track,
+    .equation-info-box::-webkit-scrollbar-track {
+      background: #eef2f7;
+      border-radius: 10px;
+    }
+
+    .equation-box::-webkit-scrollbar-thumb,
+    .equation-info-box::-webkit-scrollbar-thumb {
+      background: #b8c4d3;
+      border-radius: 10px;
+      border: 2px solid #eef2f7;
+    }
+
+    .empty-result {
+      color: var(--body);
+      font-size: 14px;
+      line-height: 1.8;
+      padding: 16px;
+      min-height: 180px;
+      height: 180px;
+      border: 1px solid #c7d6e6;
+      border-radius: 10px;
+      background: var(--equation-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .chart-stage {
+      position: relative;
+      height: calc(100% - 48px);
+      min-height: 380px;
+      background: #fff;
+    }
+
+    .chart-box {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 560px;
+      height: 360px;
+      background: #fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .chart-box-head {
+      height: 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 12px;
+      background: #fafafa;
+      border-bottom: 1px solid var(--border);
+      cursor: move;
+      user-select: none;
+      font-size: 12px;
+      color: var(--body);
+    }
+
+    .chart-inner {
+      width: 100%;
+      height: calc(100% - 36px);
+      padding: 8px 10px 10px;
+    }
+
+    .chart-empty {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--body);
+      font-size: 14px;
+    }
+
+    .resize-handle {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: #f3f4f6;
+      color: var(--body);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: nwse-resize;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .bottom-bar {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .generate-btn {
+      width: 160px;
+      height: 40px;
+      border: none;
+      border-radius: 6px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .generate-btn:hover { background: var(--primary-active); }
+    .generate-btn:disabled {
+      background: var(--disabled);
+      cursor: not-allowed;
+    }
+
+    .loading-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.38);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 98;
+    }
+
+    .loader {
+      width: 42px;
+      height: 42px;
+      border: 4px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-bar">
+    <div></div>
+    <div class="nav-center">
+      <button class="nav-btn primary active">简单数据分析<span class="active-bar"></span></button>
+      <button class="nav-btn complex">复杂数据分析</button>
+      <button class="nav-btn annual">年报分析</button>
+    </div>
+    <div></div>
+  </div>
+
+  <div id="toast" class="toast"><span id="toast-text"></span></div>
+
+  <div class="main-wrap">
+    <div class="panel left-panel">
+      <div class="section-top">
+        <div>
+          <div class="section-title">数据预览</div>
+          <div class="target-line">
+            <span>因变量：人员配置人数 / Number of Staff（默认固定）</span>
+            <span title="预测目标固定，进阶修改可切换至复杂模块">🔒</span>
+            <span id="file-badge" class="file-badge" style="display:none"></span>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-sm btn-primary-sm" id="import-btn">导入Excel</button>
+          <input type="file" id="file-input" accept=".xls,.xlsx" style="display:none" />
+          <button class="btn-sm btn-outline-sm" id="toggle-all-btn">全选/取消全选自变量</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel right-panel">
+      <div class="sub-panel" style="background:#f7fafc;">
+        <div class="title-line">人员配置预测方程</div>
+        <div id="equation-content" class="empty-result">导入数据并勾选自变量后，系统将在此生成回归方程、系数解释和模型指标。</div>
+      </div>
+
+      <div class="sub-panel">
+        <div class="title-line">拟合效果对比</div>
+        <div class="chart-stage" id="chart-stage">
+          <div class="chart-box" id="chart-box">
+            <div class="chart-box-head" id="chart-drag-handle">
+              <span>↕ 图形容器（可拖动）</span>
+              <span>📊 实际人员数 vs 预测人员数</span>
+            </div>
+            <div class="chart-inner">
+              <canvas id="fit-chart"></canvas>
+              <div class="chart-empty" id="chart-empty">生成分析结果后显示“实际人员数 vs 预测人员数”散点图。</div>
+            </div>
+            <div class="resize-handle" id="resize-handle">⤡</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="generate-btn" id="generate-btn" disabled title="请先导入数据并勾选自变量">生成分析结果</button>
+  </div>
+
+  <div class="loading-mask" id="loading-mask">
+    <div class="loader"></div>
+    <div style="color:#fff;font-size:14px;margin-top:12px;">模型建模中，请稍候...</div>
+  </div>
+
+  <script>
+    const REQUIRED_NAME_COL = '酒店名称';
+    const NAME_ALIASES = ['酒店名称', 'hotel name', 'hotel', '酒店', '门店名称', '分店名称', 'hotel id', 'hotel code', '酒店编号', '门店编号', '店号', '编码', 'id'];
+    const REQUIRED_TARGET_COL = '人员配置人数';
+    const TARGET_ALIASES = ['人员配置人数', 'number of staff'];
+    const MAX_FEATURES = 8;
+    const MIN_CHART_W = 400;
+    const MIN_CHART_H = 300;
+
+    const state = {
+      rawRows: [],
+      nameColumn: REQUIRED_NAME_COL,
+      targetColumn: REQUIRED_TARGET_COL,
+      processedRows: [],
+      headers: [],
+      numericColumns: [],
+      selectedVars: [],
+      issuesByCell: {},
+      columnFixNotes: {},
+      fileName: '',
+      modelResult: null,
+      chart: null
+    };
+
+    const els = {
+      toast: document.getElementById('toast'),
+      toastText: document.getElementById('toast-text'),
+      importBtn: document.getElementById('import-btn'),
+      fileInput: document.getElementById('file-input'),
+      toggleAllBtn: document.getElementById('toggle-all-btn'),
+      tableHead: document.getElementById('table-head'),
+      tableBody: document.getElementById('table-body'),
+      fileBadge: document.getElementById('file-badge'),
+      generateBtn: document.getElementById('generate-btn'),
+      equationContent: document.getElementById('equation-content'),
+      loadingMask: document.getElementById('loading-mask'),
+      chartEmpty: document.getElementById('chart-empty'),
+      fitChart: document.getElementById('fit-chart'),
+      chartBox: document.getElementById('chart-box'),
+      chartStage: document.getElementById('chart-stage'),
+      chartDragHandle: document.getElementById('chart-drag-handle'),
+      resizeHandle: document.getElementById('resize-handle')
+    };
+
+    function showToast(type, text) {
+      els.toast.className = 'toast ' + type;
+      els.toastText.textContent = text;
+      els.toast.style.display = 'flex';
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => { els.toast.style.display = 'none'; }, 3000);
+    }
+
+    function setLoading(flag) {
+      els.loadingMask.style.display = flag ? 'flex' : 'none';
+      els.generateBtn.textContent = flag ? '生成中...' : '生成分析结果';
+    }
+
+    function updateGenerateBtn() {
+      const ready = state.processedRows.length > 0 && state.selectedVars.length > 0;
+      els.generateBtn.disabled = !ready;
+      if (!state.processedRows.length) {
+        els.generateBtn.title = '请先导入数据并勾选自变量';
+      } else if (!state.selectedVars.length) {
+        els.generateBtn.title = '请至少勾选1个自变量';
+      } else {
+        els.generateBtn.title = '';
+      }
+    }
+
+    function toNumber(v) {
+      if (typeof v === 'number') return v;
+      const cleaned = String(v).replace(/,/g, '').replace(/%/g, '');
+      const num = Number(cleaned);
+      return Number.isFinite(num) ? num : NaN;
+    }
+
+    function roundTo(v, n) {
+      const p = Math.pow(10, n);
+      return Math.round(v * p) / p;
+    }
+
+    function formatCell(v) {
+      return typeof v === 'number'
+        ? Number(v).toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+        : String(v ?? '');
+    }
+
+    function isNameColumn(name) {
+      const normalized = String(name || '').trim().toLowerCase();
+      return NAME_ALIASES.some(alias => alias.toLowerCase() === normalized);
+    }
+
+    function getNameColumn(headers, rows) {
+      const aliasMatched = headers.find(h => isNameColumn(h));
+      if (aliasMatched) return aliasMatched;
+
+      for (const header of headers) {
+        if (isTargetColumn(header)) continue;
+        const values = rows.map(r => r[header]).filter(v => v !== '' && v !== null && v !== undefined);
+        if (!values.length) continue;
+        const uniqueCount = new Set(values.map(v => String(v).trim())).size;
+        const numericCount = values.filter(v => Number.isFinite(Number(String(v).trim()))).length;
+        const textCount = values.filter(v => !Number.isFinite(Number(String(v).trim()))).length;
+        if (uniqueCount >= Math.max(2, Math.floor(values.length * 0.6)) && (numericCount === values.length || textCount > 0)) {
+          return header;
+        }
+      }
+
+      return headers.find(h => !isTargetColumn(h)) || null;
+    }
+
+    function isTargetColumn(name) {
+      const normalized = String(name || '').trim().toLowerCase();
+      return TARGET_ALIASES.some(alias => alias.toLowerCase() === normalized);
+    }
+
+    function getTargetColumn(headers) {
+      return headers.find(h => isTargetColumn(h));
+    }
+
+    function preprocessData(rows, headers) {
+      const issues = {};
+      const fixNotes = {};
+
+      function inferNumeric(col) {
+        if (col === (state.nameColumn || REQUIRED_NAME_COL)) return false;
+        if (isTargetColumn(col)) return true;
+        let numericCount = 0;
+        let validCount = 0;
+        rows.forEach(row => {
+          const val = row[col];
+          if (val === '' || val === null || val === undefined) return;
+          validCount += 1;
+          if (isFinite(toNumber(val))) numericCount += 1;
+        });
+        return validCount > 0 && numericCount / validCount >= 0.8;
+      }
+
+      const numericCols = headers.filter(inferNumeric);
+      const means = {};
+      numericCols.forEach(col => {
+        const vals = rows.map(r => toNumber(r[col])).filter(v => Number.isFinite(v));
+        means[col] = vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
+      });
+
+      const processed = rows.map((row, rowIdx) => {
+        const next = { ...row };
+        headers.forEach(col => {
+          if (!numericCols.includes(col)) return;
+          let value = toNumber(row[col]);
+          if (!Number.isFinite(value)) {
+            value = means[col];
+            issues[`${rowIdx}-${col}`] = `缺失值已用均值 ${means[col].toFixed(2)} 填充`;
+            fixNotes[col] = true;
+          }
+          if (col.includes('入住率')) {
+            if (value > 100) {
+              value = 100;
+              issues[`${rowIdx}-${col}`] = '入住率超出合理范围，已自动修正';
+              fixNotes[col] = true;
+            } else if (value < 0) {
+              value = 0;
+              issues[`${rowIdx}-${col}`] = '入住率低于0%，已自动修正';
+              fixNotes[col] = true;
+            }
+          }
+          next[col] = roundTo(value, 4);
+        });
+        return next;
+      });
+
+      return { rows: processed, issues, fixNotes, numericCols };
+    }
+
+    function renderTable() {
+      const headers = state.headers;
+      const previewRows = state.processedRows.slice(0, 80);
+      if (!headers.length) {
+        els.tableHead.innerHTML = '';
+        els.tableBody.innerHTML = `<tr><td class="empty-cell">请导入 Excel 数据后预览</td></tr>`;
+        return;
+      }
+
+      els.tableHead.innerHTML = '<tr>' + headers.map(header => {
+        const isVar = header !== (state.nameColumn || REQUIRED_NAME_COL) && !isTargetColumn(header);
+        const isNumeric = state.numericColumns.includes(header);
+        const checked = state.selectedVars.includes(header);
+        return `
+          <th class="${checked ? 'selected-col' : ''}">
+            <div class="th-inner">
+              ${isVar ? `<input type="checkbox" ${checked ? 'checked' : ''} ${!isNumeric ? 'disabled' : ''} data-col="${header}" title="${!isNumeric ? '非数值列不可作为自变量' : '选择为自变量'}" />` : ''}
+              <span>${header}</span>
+            </div>
+            ${isVar ? `<div class="header-meta">（自变量）${!isNumeric ? ' - 非数值列不可选' : ''}</div>` : ''}
+            ${state.columnFixNotes[header] ? '<div class="header-fix">已修正</div>' : ''}
+          </th>
+        `;
+      }).join('') + '</tr>';
+
+      els.tableBody.innerHTML = previewRows.length ? previewRows.map((row, rowIdx) => {
+        return '<tr>' + headers.map(header => {
+          const selected = state.selectedVars.includes(header);
+          const issue = state.issuesByCell[`${rowIdx}-${header}`];
+          const classes = [selected ? 'selected-col' : '', issue ? 'warning-cell' : ''].join(' ');
+          return `<td class="${classes}" title="${issue || ''}">${formatCell(row[header])}</td>`;
+        }).join('') + '</tr>';
+      }).join('') : `<tr><td class="empty-cell" colspan="${headers.length}">请导入 Excel 数据后预览</td></tr>`;
+
+      els.tableHead.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.addEventListener('change', () => toggleVar(input.dataset.col));
+      });
+    }
+
+    function toggleVar(col) {
+      if (!state.numericColumns.includes(col)) {
+        showToast('warning', `已排除非数值型自变量：${col}列`);
+        return;
+      }
+      const exists = state.selectedVars.includes(col);
+      if (exists) {
+        state.selectedVars = state.selectedVars.filter(x => x !== col);
+      } else {
+        if (state.selectedVars.length >= MAX_FEATURES) {
+          showToast('warning', '自变量数量建议≤8个，请保留核心指标');
+          return;
+        }
+        state.selectedVars.push(col);
+      }
+      renderTable();
+      updateGenerateBtn();
+    }
+
+    function toggleAll() {
+      if (!state.processedRows.length) {
+        showToast('warning', '请先导入Excel数据');
+        return;
+      }
+
+      const selectableVars = state.headers.filter(header =>
+        header !== state.nameColumn &&
+        header !== state.targetColumn &&
+        !isTargetColumn(header) &&
+        state.numericColumns.includes(header)
+      );
+
+      if (state.selectedVars.length === selectableVars.length) {
+        state.selectedVars = [];
+      } else {
+        state.selectedVars = selectableVars.slice(0, MAX_FEATURES);
+        if (selectableVars.length > MAX_FEATURES) {
+          showToast('warning', `已为你勾选前${MAX_FEATURES}个数值型自变量`);
+        }
+      }
+      renderTable();
+      updateGenerateBtn();
+    }
+
+    function transpose(a) {
+      return a[0].map((_, i) => a.map(row => row[i]));
+    }
+
+    function multiply(a, b) {
+      const rows = a.length;
+      const cols = b[0].length;
+      const inner = b.length;
+      const out = Array.from({ length: rows }, () => Array(cols).fill(0));
+      for (let i = 0; i < rows; i++) {
+        for (let k = 0; k < inner; k++) {
+          for (let j = 0; j < cols; j++) out[i][j] += a[i][k] * b[k][j];
+        }
+      }
+      return out;
+    }
+
+    function multiplyVec(a, vec) {
+      return a.map(row => row.reduce((sum, v, i) => sum + v * vec[i], 0));
+    }
+
+    function inverse(matrix) {
+      const n = matrix.length;
+      const aug = matrix.map((row, i) => [
+        ...row.map(v => Number(v)),
+        ...Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))
+      ]);
+
+      for (let i = 0; i < n; i++) {
+        let pivot = aug[i][i];
+        if (Math.abs(pivot) < 1e-12) {
+          let swap = i + 1;
+          while (swap < n && Math.abs(aug[swap][i]) < 1e-12) swap++;
+          if (swap === n) throw new Error('矩阵不可逆，请减少高度相关变量后重试');
+          [aug[i], aug[swap]] = [aug[swap], aug[i]];
+          pivot = aug[i][i];
+        }
+        for (let j = 0; j < 2 * n; j++) aug[i][j] /= pivot;
+        for (let r = 0; r < n; r++) {
+          if (r === i) continue;
+          const factor = aug[r][i];
+          for (let c = 0; c < 2 * n; c++) aug[r][c] -= factor * aug[i][c];
+        }
+      }
+      return aug.map(row => row.slice(n));
+    }
+
+    function addRidgeIfNeeded(matrix) {
+      return matrix.map((row, i) => row.map((v, j) => i === j ? v + 1e-8 : v));
+    }
+
+    function columnMeans(arr) {
+      const m = arr[0].length;
+      const means = Array(m).fill(0);
+      arr.forEach(row => row.forEach((v, i) => means[i] += v));
+      return means.map(v => v / arr.length);
+    }
+
+    function columnStds(arr, means) {
+      const m = arr[0].length;
+      const vars = Array(m).fill(0);
+      arr.forEach(row => row.forEach((v, i) => vars[i] += Math.pow(v - means[i], 2)));
+      return vars.map(v => Math.sqrt(v / Math.max(1, arr.length - 1)));
+    }
+
+    function computeVIF(Xraw, features) {
+      if (features.length <= 1) return features.map(name => ({ name, vif: 1 }));
+      return features.map((featureName, idx) => {
+        const target = Xraw.map(row => row[idx]);
+        const others = Xraw.map(row => row.filter((_, i) => i !== idx));
+        if (!others[0] || !others[0].length) return { name: featureName, vif: 1 };
+        const means = columnMeans(others);
+        const stds = columnStds(others, means).map(v => v === 0 ? 1 : v);
+        const standardized = others.map(row => row.map((v, i) => (v - means[i]) / stds[i]));
+        const design = standardized.map(row => [1, ...row]);
+        try {
+          const Xt = transpose(design);
+          const beta = multiplyVec(inverse(addRidgeIfNeeded(multiply(Xt, design))), multiplyVec(Xt, target));
+          const pred = design.map(row => row.reduce((sum, v, i) => sum + v * beta[i], 0));
+          const tMean = target.reduce((a, b) => a + b, 0) / target.length;
+          const sse = target.reduce((sum, yi, i) => sum + Math.pow(yi - pred[i], 2), 0);
+          const sst = target.reduce((sum, yi) => sum + Math.pow(yi - tMean, 2), 0);
+          const r2 = sst === 0 ? 0 : 1 - sse / sst;
+          return { name: featureName, vif: 1 / Math.max(1e-6, 1 - r2) };
+        } catch (e) {
+          return { name: featureName, vif: 999 };
+        }
+      });
+    }
+
+    function buildModel(rows, features, targetName) {
+      if (rows.length < 2) throw new Error('样本量不足，无法建模');
+
+      const Xraw = rows.map(row => features.map(f => toNumber(row[f])));
+      const y = rows.map(row => toNumber(row[targetName]));
+
+      const means = columnMeans(Xraw);
+      const stds = columnStds(Xraw, means).map(v => v === 0 ? 1 : v);
+      const Xstd = Xraw.map(row => row.map((v, i) => (v - means[i]) / stds[i]));
+      const Xdesign = Xstd.map(row => [1, ...row]);
+      const Xt = transpose(Xdesign);
+      const XtX = multiply(Xt, Xdesign);
+      const XtXInv = inverse(addRidgeIfNeeded(XtX));
+      const Xty = multiplyVec(Xt, y);
+      const betaStd = multiplyVec(XtXInv, Xty);
+      const slopes = betaStd.slice(1).map((b, i) => b / stds[i]);
+      const intercept = betaStd[0] - slopes.reduce((sum, b, i) => sum + b * means[i], 0);
+
+      const predicted = Xraw.map(row => intercept + row.reduce((sum, v, i) => sum + v * slopes[i], 0));
+      const yMean = y.reduce((a, b) => a + b, 0) / y.length;
+      const sse = y.reduce((sum, yi, i) => sum + Math.pow(yi - predicted[i], 2), 0);
+      const sst = y.reduce((sum, yi) => sum + Math.pow(yi - yMean, 2), 0);
+      const r2 = sst === 0 ? 1 : 1 - sse / sst;
+      const mae = y.reduce((sum, yi, i) => sum + Math.abs(yi - predicted[i]), 0) / y.length;
+      const vifList = computeVIF(Xraw, features);
+
+      const warnings = [];
+      const highVif = vifList.filter(item => item.vif > 10);
+      if (highVif.length >= 2) {
+        warnings.push(`${highVif[0].name}与${highVif[1].name}列相关性较高，建议减少1列以提升系数准确性`);
+      } else if (highVif.length === 1) {
+        warnings.push(`${highVif[0].name}列VIF=${highVif[0].vif.toFixed(2)}，存在较强共线性风险`);
+      }
+      if (rows.length < 5) warnings.push('样本量较少（<5个），预测结果仅供参考');
+
+      return {
+        intercept,
+        coefficients: features.map((name, i) => ({ name, value: slopes[i] })),
+        points: y.map((actual, i) => ({ actual, predicted: predicted[i] })),
+        r2,
+        mae,
+        vifList,
+        warnings
+      };
+    }
+
+    function fitTextInBox(wrapId, fitId, minScale = 0.55) {
+      const wrap = document.getElementById(wrapId);
+      const fit = document.getElementById(fitId);
+      if (!wrap || !fit) return;
+      fit.style.transform = 'scale(1)';
+      const wrapStyle = window.getComputedStyle(wrap);
+      const padX = (parseFloat(wrapStyle.paddingLeft) || 0) + (parseFloat(wrapStyle.paddingRight) || 0);
+      const padY = (parseFloat(wrapStyle.paddingTop) || 0) + (parseFloat(wrapStyle.paddingBottom) || 0);
+      const availableW = wrap.clientWidth - padX;
+      const availableH = wrap.clientHeight - padY;
+      const widthRatio = availableW / Math.max(fit.scrollWidth, 1);
+      const heightRatio = availableH / Math.max(fit.scrollHeight, 1);
+      const scale = Math.min(1, widthRatio, heightRatio);
+      fit.style.transform = `scale(${Math.max(scale, minScale)})`;
+    }
+
+    function fitEquationText() {
+      fitTextInBox('equation-wrap', 'equation-fit', 0.75);
+    }
+
+    function renderEquation(modelResult) {
+      if (!modelResult) {
+        els.equationContent.className = 'empty-result';
+        els.equationContent.innerHTML = '导入数据并勾选自变量后，系统将在此生成回归方程、变量影响判断提示、系数解释和模型指标。';
+        return;
+      }
+
+      const equationHtml = `
+        <div class="equation-panel">
+          <div class="equation-box">
+            <div class="equation-wrap">
+              <div id="equation-fit" class="equation-fit">
+                <span class="equation-y">y = 人员配置人数</span>
+                <span class="equation-intercept">${modelResult.intercept.toFixed(1)}</span>
+                ${modelResult.coefficients.map(item => `
+                  <span class="equation-term">
+                    <span class="equation-op">${item.value >= 0 ? '+' : '-'}</span>
+                    <span class="equation-coef">${Math.abs(item.value).toFixed(2)}×</span><span class="equation-var" title="${item.name}">${item.name}</span>
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="equation-info-box">
+            <div class="equation-guide">
+              使用建议：可通过单独勾选或组合勾选自变量，比较某变量加入前后 R² 的变化。R² 提升越明显，说明该变量对当前样本的增量解释贡献越大；若提升很小，则说明贡献有限或与其他变量信息重复。
+            </div>
+            <div class="explain-text-wrap">
+              <div class="explain-text">
+                系数说明：${modelResult.coefficients.map((item, idx) => `${idx > 0 ? '；' : ''}${item.name}每增加1${item.name.includes('率') ? '%' : '单位'}，人员配置需${item.value >= 0 ? '增加' : '减少'}${Math.abs(item.value).toFixed(2)}人`).join('')}；R²=${modelResult.r2.toFixed(2)}（模型可解释${(modelResult.r2 * 100).toFixed(0)}%的人员数变化）；MAE=${modelResult.mae.toFixed(1)}人。
+              </div>
+            </div>
+          </div>
+        </div>
+        ${modelResult.warnings.length ? `<div class="warning-box">${modelResult.warnings.map(w => `<div>⚠ ${w}</div>`).join('')}</div>` : ''}
+      `;
+      els.equationContent.className = '';
+      els.equationContent.innerHTML = equationHtml;
+      requestAnimationFrame(fitEquationText);
+    }
+
+    function regressionLine(points) {
+      const xs = points.map(p => p.actual);
+      const ys = points.map(p => p.predicted);
+      const xMean = xs.reduce((a,b)=>a+b,0) / xs.length;
+      const yMean = ys.reduce((a,b)=>a+b,0) / ys.length;
+      let num = 0, den = 0;
+      for (let i = 0; i < xs.length; i++) {
+        num += (xs[i] - xMean) * (ys[i] - yMean);
+        den += Math.pow(xs[i] - xMean, 2);
+      }
+      const slope = den === 0 ? 1 : num / den;
+      const intercept = yMean - slope * xMean;
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      return [
+        { x: minX, y: slope * minX + intercept },
+        { x: maxX, y: slope * maxX + intercept }
+      ];
+    }
+
+    function renderChart(modelResult) {
+      if (!modelResult) {
+        els.chartEmpty.style.display = 'flex';
+        if (state.chart) {
+          state.chart.destroy();
+          state.chart = null;
+        }
+        return;
+      }
+
+      els.chartEmpty.style.display = 'none';
+      const fitLine = regressionLine(modelResult.points);
+      if (state.chart) state.chart.destroy();
+
+      state.chart = new Chart(els.fitChart.getContext('2d'), {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: '散点',
+              data: modelResult.points.map(p => ({ x: p.actual, y: p.predicted })),
+              backgroundColor: '#2E86AB'
+            },
+            {
+              label: '拟合线',
+              type: 'line',
+              data: fitLine,
+              borderColor: '#C73E1D',
+              borderWidth: 2,
+              pointRadius: 0,
+              fill: false,
+              tension: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: { color: '#666', font: { size: 12 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: (${Number(ctx.parsed.x).toFixed(2)}, ${Number(ctx.parsed.y).toFixed(2)})`
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: '实际人员数', color: '#333', font: { size: 12 } },
+              ticks: { color: '#333' },
+              grid: { color: '#eee' }
+            },
+            y: {
+              title: { display: true, text: '预测人员数', color: '#333', font: { size: 12 } },
+              ticks: { color: '#333' },
+              grid: { color: '#eee' }
+            }
+          }
+        }
+      });
+    }
+
+    async function handleFile(file) {
+      const lower = file.name.toLowerCase();
+      if (!lower.endsWith('.xls') && !lower.endsWith('.xlsx')) {
+        showToast('error', '仅支持上传 .xls / .xlsx 文件');
+        return;
+      }
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (!json.length) {
+          showToast('error', 'Excel 中未读取到有效数据');
+          return;
+        }
+
+        const headers = Object.keys(json[0] || {});
+        const detectedTargetCol = getTargetColumn(headers);
+        const detectedNameCol = getNameColumn(headers, json);
+        if (!detectedTargetCol) {
+          showToast('error', '未识别到人员配置人数列，请确认Excel格式');
+          return;
+        }
+        if (!detectedNameCol) {
+          showToast('error', '未识别到酒店标识列，请确认Excel格式');
+          return;
+        }
+
+        const { rows, issues, fixNotes, numericCols } = preprocessData(json, headers);
+        state.rawRows = json;
+        state.nameColumn = detectedNameCol;
+        state.targetColumn = detectedTargetCol;
+        state.processedRows = rows;
+        state.headers = headers;
+        state.issuesByCell = issues;
+        state.columnFixNotes = fixNotes;
+        state.numericColumns = numericCols.filter(c => c !== state.nameColumn && c !== state.targetColumn && !isTargetColumn(c));
+        state.selectedVars = [];
+        state.modelResult = null;
+        state.fileName = file.name;
+
+        els.fileBadge.textContent = file.name;
+        els.fileBadge.style.display = 'inline-block';
+        renderTable();
+        renderEquation(null);
+        renderChart(null);
+        updateGenerateBtn();
+        showToast('success', `Excel 导入成功，已识别标识列：${detectedNameCol}；因变量列：${detectedTargetCol}`);
+      } catch (err) {
+        showToast('error', '导入失败：' + err.message);
+      }
+    }
+
+    async function generateModel() {
+      if (!state.processedRows.length) {
+        showToast('error', '请先导入Excel数据');
+        return;
+      }
+      if (!state.selectedVars.length) {
+        showToast('error', '请至少勾选1个自变量');
+        return;
+      }
+      setLoading(true);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const validSelectedVars = state.selectedVars.filter(col =>
+          col !== state.nameColumn &&
+          col !== state.targetColumn &&
+          !isTargetColumn(col)
+        );
+        if (validSelectedVars.length !== state.selectedVars.length) {
+          state.selectedVars = validSelectedVars;
+          renderTable();
+        }
+        if (!validSelectedVars.length) {
+          throw new Error('当前勾选中包含无效自变量，请重新勾选后再试');
+        }
+        state.modelResult = buildModel(state.processedRows, validSelectedVars, state.targetColumn || REQUIRED_TARGET_COL);
+        renderEquation(state.modelResult);
+        renderChart(state.modelResult);
+        showToast('success', '分析结果已生成');
+      } catch (err) {
+        showToast('error', '建模失败：' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    els.importBtn.addEventListener('click', () => els.fileInput.click());
+    els.fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+    els.toggleAllBtn.addEventListener('click', toggleAll);
+    els.generateBtn.addEventListener('click', generateModel);
+
+    renderTable();
+    updateGenerateBtn();
+    window.addEventListener('resize', () => {
+      requestAnimationFrame(fitEquationText);
+    });
+
+    (function enableChartDragResize() {
+      let dragMeta = null;
+      let resizeMeta = null;
+
+      els.chartDragHandle.addEventListener('mousedown', (e) => {
+        const stageRect = els.chartStage.getBoundingClientRect();
+        const boxRect = els.chartBox.getBoundingClientRect();
+        dragMeta = {
+          startX: e.clientX,
+          startY: e.clientY,
+          originX: boxRect.left - stageRect.left,
+          originY: boxRect.top - stageRect.top,
+          maxX: Math.max(0, stageRect.width - boxRect.width),
+          maxY: Math.max(0, stageRect.height - boxRect.height)
+        };
+      });
+
+      els.resizeHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        const stageRect = els.chartStage.getBoundingClientRect();
+        const boxRect = els.chartBox.getBoundingClientRect();
+        resizeMeta = {
+          startX: e.clientX,
+          startY: e.clientY,
+          startW: boxRect.width,
+          startH: boxRect.height,
+          currentX: boxRect.left - stageRect.left,
+          currentY: boxRect.top - stageRect.top,
+          maxW: stageRect.width * 0.9 - (boxRect.left - stageRect.left),
+          maxH: stageRect.height - (boxRect.top - stageRect.top)
+        };
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (dragMeta) {
+          const dx = e.clientX - dragMeta.startX;
+          const dy = e.clientY - dragMeta.startY;
+          const x = Math.max(0, Math.min(dragMeta.maxX, dragMeta.originX + dx));
+          const y = Math.max(0, Math.min(dragMeta.maxY, dragMeta.originY + dy));
+          els.chartBox.style.left = x + 'px';
+          els.chartBox.style.top = y + 'px';
+        }
+        if (resizeMeta) {
+          const dx = e.clientX - resizeMeta.startX;
+          const dy = e.clientY - resizeMeta.startY;
+          const w = Math.max(MIN_CHART_W, Math.min(resizeMeta.maxW, resizeMeta.startW + dx));
+          const h = Math.max(MIN_CHART_H, Math.min(resizeMeta.maxH, resizeMeta.startH + dy));
+          els.chartBox.style.width = w + 'px';
+          els.chartBox.style.height = h + 'px';
+          if (state.chart) state.chart.resize();
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        dragMeta = null;
+        resizeMeta = null;
+      });
+    })();
+  </script>
+</body>
+</html>
