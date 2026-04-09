@@ -261,6 +261,32 @@
       border-bottom: 1px solid var(--border);
     }
 
+    .chart-toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      column-gap: 12px;
+    }
+
+    .chart-toolbar .title-line {
+      margin: 0;
+      padding: 0;
+      border-bottom: none;
+      text-align: center;
+      justify-self: center;
+    }
+
+    .chart-toolbar-spacer {
+      min-width: 1px;
+    }
+
+    .chart-generate-wrap {
+      justify-self: end;
+    }
+
     .equation-panel {
       display: flex;
       flex-direction: column;
@@ -474,12 +500,6 @@
       user-select: none;
     }
 
-    .bottom-bar {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-    }
-
     .generate-btn {
       width: 160px;
       height: 40px;
@@ -523,15 +543,87 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+
+    .lang-slot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+    }
+
+    .lang-switcher {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lang-trigger {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .lang-trigger:hover { background: #f8fbff; }
+
+    .lang-menu {
+      position: absolute;
+      top: 50px;
+      left: 0;
+      min-width: 190px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      display: none;
+      z-index: 120;
+    }
+
+    .lang-menu.open { display: block; }
+
+    .lang-menu button {
+      width: 100%;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .lang-menu button:hover,
+    .lang-menu button.active {
+      background: #eef6ff;
+      color: var(--primary-active);
+      font-weight: 700;
+    }
+
   </style>
 </head>
 <body>
   <div class="nav-bar">
-    <div></div>
+    <div class="lang-slot">
+      <div class="lang-switcher">
+        <button class="lang-trigger" id="lang-trigger" title="切换语言">🌐</button>
+        <div class="lang-menu" id="lang-menu"></div>
+      </div>
+    </div>
     <div class="nav-center">
-      <button class="nav-btn primary active">简单数据分析<span class="active-bar"></span></button>
-      <button class="nav-btn complex">复杂数据分析</button>
-      <button class="nav-btn annual">年报分析</button>
+      <button class="nav-btn primary active" id="nav-simple-btn">简单数据分析<span class="active-bar"></span></button>
+      <button class="nav-btn complex" id="nav-complex-btn">复杂数据分析</button>
+      <button class="nav-btn annual" id="nav-annual-btn">年报分析</button>
     </div>
     <div></div>
   </div>
@@ -542,10 +634,10 @@
     <div class="panel left-panel">
       <div class="section-top">
         <div>
-          <div class="section-title">数据预览</div>
+          <div class="section-title" id="data-preview-title">数据预览</div>
           <div class="target-line">
-            <span>因变量：人员配置人数 / Number of Staff（默认固定）</span>
-            <span title="预测目标固定，进阶修改可切换至复杂模块">🔒</span>
+            <span id="target-line-text">因变量：人员配置人数 / Number of Staff（默认固定）</span>
+            <span id="target-lock" title="预测目标固定，进阶修改可切换至复杂模块">🔒</span>
             <span id="file-badge" class="file-badge" style="display:none"></span>
           </div>
         </div>
@@ -566,17 +658,23 @@
 
     <div class="panel right-panel">
       <div class="sub-panel" style="background:#f7fafc;">
-        <div class="title-line">人员配置预测方程</div>
+        <div class="title-line" id="equation-title">人员配置预测方程</div>
         <div id="equation-content" class="empty-result">导入数据并勾选自变量后，系统将在此生成回归方程、系数解释和模型指标。</div>
       </div>
 
       <div class="sub-panel">
-        <div class="title-line">拟合效果对比</div>
+        <div class="chart-toolbar">
+          <div class="chart-toolbar-spacer"></div>
+          <div class="title-line" id="chart-title">拟合效果对比</div>
+          <div class="chart-generate-wrap">
+            <button class="generate-btn" id="generate-btn" disabled title="请先导入数据并勾选自变量">生成分析结果</button>
+          </div>
+        </div>
         <div class="chart-stage" id="chart-stage">
           <div class="chart-box" id="chart-box">
             <div class="chart-box-head" id="chart-drag-handle">
-              <span>↕ 图形容器（可拖动）</span>
-              <span>📊 实际人员数 vs 预测人员数</span>
+              <span id="chart-drag-text">↕ 图形容器（可拖动）</span>
+              <span id="chart-head-title">📊 实际人员数 vs 预测人员数</span>
             </div>
             <div class="chart-inner">
               <canvas id="fit-chart"></canvas>
@@ -589,13 +687,9 @@
     </div>
   </div>
 
-  <div class="bottom-bar">
-    <button class="generate-btn" id="generate-btn" disabled title="请先导入数据并勾选自变量">生成分析结果</button>
-  </div>
-
   <div class="loading-mask" id="loading-mask">
     <div class="loader"></div>
-    <div style="color:#fff;font-size:14px;margin-top:12px;">模型建模中，请稍候...</div>
+    <div id="loading-text" style="color:#fff;font-size:14px;margin-top:12px;">模型建模中，请稍候...</div>
   </div>
 
   <script>
@@ -611,15 +705,20 @@
       rawRows: [],
       nameColumn: REQUIRED_NAME_COL,
       targetColumn: REQUIRED_TARGET_COL,
+      targetSymbol: 'Y',
       processedRows: [],
       headers: [],
+      displayHeaders: {},
+      variableSymbols: {},
+      symbolToHeader: {},
       numericColumns: [],
       selectedVars: [],
       issuesByCell: {},
       columnFixNotes: {},
       fileName: '',
       modelResult: null,
-      chart: null
+      chart: null,
+      lang: 'zh'
     };
 
     const els = {
@@ -639,8 +738,153 @@
       chartBox: document.getElementById('chart-box'),
       chartStage: document.getElementById('chart-stage'),
       chartDragHandle: document.getElementById('chart-drag-handle'),
-      resizeHandle: document.getElementById('resize-handle')
+      resizeHandle: document.getElementById('resize-handle'),
+      langTrigger: document.getElementById('lang-trigger'),
+      langMenu: document.getElementById('lang-menu'),
+      navSimpleBtn: document.getElementById('nav-simple-btn'),
+      navComplexBtn: document.getElementById('nav-complex-btn'),
+      navAnnualBtn: document.getElementById('nav-annual-btn'),
+      dataPreviewTitle: document.getElementById('data-preview-title'),
+      targetLineText: document.getElementById('target-line-text'),
+      targetLock: document.getElementById('target-lock'),
+      equationTitle: document.getElementById('equation-title'),
+      chartTitle: document.getElementById('chart-title'),
+      chartDragText: document.getElementById('chart-drag-text'),
+      chartHeadTitle: document.getElementById('chart-head-title'),
+      loadingText: document.getElementById('loading-text')
     };
+
+
+    const LANG_OPTIONS = [
+      { code: 'zh', label: '中文' },
+      { code: 'en', label: 'English' },
+      { code: 'fr', label: 'Français' },
+      { code: 'th', label: 'ไทย' },
+      { code: 'id', label: 'Bahasa Indonesia' },
+      { code: 'my', label: 'မြန်မာ' },
+      { code: 'vi', label: 'Tiếng Việt' }
+    ];
+
+    const I18N = {
+      zh: {
+        pageTitle: '酒店人员配置预测小程序 - 简单数据分析模块',
+        navSimple: '简单数据分析', navComplex: '复杂数据分析', navAnnual: '年报分析',
+        dataPreview: '数据预览',
+        targetLine: '因变量：人员配置人数 / Number of Staff（默认固定）',
+        targetLockTitle: '预测目标固定，进阶修改可切换至复杂模块',
+        importExcel: '导入Excel', toggleAll: '全选/取消全选自变量',
+        equationTitle: '人员配置预测方程', chartTitle: '拟合效果对比',
+        equationEmpty: '导入数据并勾选自变量后，系统将在此生成回归方程、系数解释和模型指标。',
+        equationEmpty2: '导入数据并勾选自变量后，系统将在此生成回归方程、变量影响判断提示、系数解释和模型指标。',
+        chartDrag: '↕ 图形容器（可拖动）', chartHead: '📊 实际人员数 vs 预测人员数',
+        chartEmpty: '生成分析结果后显示“实际人员数 vs 预测人员数”散点图。',
+        generate: '生成分析结果', generating: '生成中...', loading: '模型建模中，请稍候...',
+        toastNeedImport: '请先导入Excel数据', toastNeedImportSelect: '请先导入数据并勾选自变量', toastNeedVar: '请至少勾选1个自变量',
+        toastNonNumericExcluded: '已排除非数值型自变量：{col}列', toastVarLimit: '自变量数量建议≤8个，请保留核心指标', toastSelectedTopVars: '已为你勾选前{n}个数值型自变量',
+        tableEmpty: '请导入 Excel 数据后预览',
+        headerVar: '（自变量）', headerNonNumeric: ' - 非数值列不可选', headerDisabledTitle: '非数值列不可作为自变量', headerSelectableTitle: '选择为自变量', fixed: '已修正',
+        missingFilled: '缺失值已用均值 {mean} 填充', occupancyHigh: '入住率超出合理范围，已自动修正', occupancyLow: '入住率低于0%，已自动修正',
+        modelSampleLow: '样本量不足，无法建模', matrixNotInvertible: '矩阵不可逆，请减少高度相关变量后重试',
+        vifRiskOne: '{name}列VIF={vif}，存在较强共线性风险', vifRiskTwo: '{a}与{b}列相关性较高，建议减少1列以提升系数准确性', smallSampleWarn: '样本量较少（<5个），预测结果仅供参考',
+        useAdvice: '使用建议：可通过单独勾选或组合勾选自变量，比较某变量加入前后 R² 的变化。R² 提升越明显，说明该变量对当前样本的增量解释贡献越大；若提升很小，则说明贡献有限或与其他变量信息重复。',
+        coefExplainLabel: '系数说明：', increase: '增加', decrease: '减少', unit: '单位', percent: '%',
+        r2Text: '模型可解释{pct}%的人员数变化',
+        scatter: '散点', fitLine: '拟合线', actualAxis: '实际人员数', predictedAxis: '预测人员数',
+        importTypeError: '仅支持上传 .xls / .xlsx 文件', importEmptyError: 'Excel 中未读取到有效数据',
+        targetColMissing: '未识别到人员配置人数列，请确认Excel格式', nameColMissing: '未识别到酒店标识列，请确认Excel格式',
+        importSuccess: 'Excel 导入成功，已识别标识列：{nameCol}；因变量列：{targetCol}', importFailed: '导入失败：{msg}',
+        invalidVar: '当前勾选中包含无效自变量，请重新勾选后再试', analysisReady: '分析结果已生成', buildFailed: '建模失败：{msg}',
+        fileReadAndSelect: '请先导入数据并勾选自变量', chartPointLabel: '{label}: ({x}, {y})'
+      },
+      en: {
+        pageTitle: 'Hotel Staffing Forecast - Simple Data Analysis',
+        navSimple: 'Simple Analysis', navComplex: 'Advanced Analysis', navAnnual: 'Annual Report',
+        dataPreview: 'Data Preview',
+        targetLine: 'Dependent variable: Number of Staff (fixed by default)',
+        targetLockTitle: 'The forecast target is fixed. Switch to the advanced module for further changes.',
+        importExcel: 'Import Excel', toggleAll: 'Select/Clear All Variables',
+        equationTitle: 'Staffing Forecast Equation', chartTitle: 'Fit Comparison',
+        equationEmpty: 'After importing data and selecting variables, the system will generate the regression equation, coefficient explanations, and model metrics here.',
+        equationEmpty2: 'After importing data and selecting variables, the system will generate the regression equation, variable impact tips, coefficient explanations, and model metrics here.',
+        chartDrag: '↕ Chart Container (draggable)', chartHead: '📊 Actual Staff vs Predicted Staff',
+        chartEmpty: 'After generating results, a scatter plot of “Actual Staff vs Predicted Staff” will appear here.',
+        generate: 'Generate Results', generating: 'Generating...', loading: 'Building model, please wait...',
+        toastNeedImport: 'Please import Excel data first', toastNeedImportSelect: 'Please import data and select variables first', toastNeedVar: 'Please select at least 1 independent variable',
+        toastNonNumericExcluded: 'Non-numeric variable excluded: column {col}', toastVarLimit: 'Up to 8 variables are recommended. Keep the core indicators.', toastSelectedTopVars: 'The first {n} numeric variables have been selected for you',
+        tableEmpty: 'Import Excel data to preview',
+        headerVar: '(Independent variable)', headerNonNumeric: ' - Non-numeric columns cannot be selected', headerDisabledTitle: 'Non-numeric columns cannot be used as variables', headerSelectableTitle: 'Select as independent variable', fixed: 'Adjusted',
+        missingFilled: 'Missing values were filled with mean {mean}', occupancyHigh: 'Occupancy exceeded the valid range and was corrected automatically', occupancyLow: 'Occupancy was below 0% and was corrected automatically',
+        modelSampleLow: 'Not enough samples to build a model', matrixNotInvertible: 'Matrix is not invertible. Reduce highly correlated variables and try again.',
+        vifRiskOne: 'Column {name} has VIF={vif}, indicating strong multicollinearity risk', vifRiskTwo: 'Columns {a} and {b} are highly correlated. Remove one to improve coefficient accuracy.', smallSampleWarn: 'Sample size is small (<5). Results are for reference only.',
+        useAdvice: 'Usage tip: You can compare the R² change before and after adding a variable by selecting variables individually or in combination. A larger R² increase means the variable adds more explanatory power; a smaller increase suggests limited contribution or overlapping information.',
+        coefExplainLabel: 'Coefficient explanation:', increase: 'increase', decrease: 'decrease', unit: 'unit', percent: '%',
+        r2Text: 'The model explains {pct}% of the variation in staff count',
+        scatter: 'Scatter', fitLine: 'Fit Line', actualAxis: 'Actual Staff', predictedAxis: 'Predicted Staff',
+        importTypeError: 'Only .xls / .xlsx files are supported', importEmptyError: 'No valid data was read from the Excel file',
+        targetColMissing: 'The Number of Staff column was not recognized. Please check the Excel format.', nameColMissing: 'The hotel identifier column was not recognized. Please check the Excel format.',
+        importSuccess: 'Excel imported successfully. Identifier column: {nameCol}; dependent variable: {targetCol}', importFailed: 'Import failed: {msg}',
+        invalidVar: 'The current selection contains invalid variables. Please reselect and try again.', analysisReady: 'Analysis results generated', buildFailed: 'Model building failed: {msg}',
+        fileReadAndSelect: 'Please import data and select variables first', chartPointLabel: '{label}: ({x}, {y})'
+      },
+      fr: {
+        pageTitle: 'Prévision des effectifs hôteliers - Analyse simple', navSimple: 'Analyse simple', navComplex: 'Analyse avancée', navAnnual: 'Rapport annuel', dataPreview: 'Aperçu des données',
+        targetLine: 'Variable dépendante : nombre de personnel (fixe par défaut)', targetLockTitle: 'La cible de prévision est fixe. Passez au module avancé pour la modifier.', importExcel: 'Importer Excel', toggleAll: 'Tout sélectionner / désélectionner', equationTitle: 'Équation de prévision des effectifs', chartTitle: 'Comparaison de l’ajustement',
+        equationEmpty: 'Après importation des données et sélection des variables, le système générera ici l’équation de régression, l’explication des coefficients et les indicateurs du modèle.', equationEmpty2: 'Après importation des données et sélection des variables, le système générera ici l’équation de régression, les conseils sur l’impact des variables, l’explication des coefficients et les indicateurs du modèle.', chartDrag: '↕ Conteneur du graphique (déplaçable)', chartHead: '📊 Effectif réel vs effectif prédit', chartEmpty: 'Après génération des résultats, un nuage de points « effectif réel vs effectif prédit » s’affichera ici.', generate: 'Générer les résultats', generating: 'Génération...', loading: 'Modélisation en cours, veuillez patienter...', toastNeedImport: 'Veuillez d’abord importer les données Excel', toastNeedImportSelect: 'Veuillez d’abord importer les données et sélectionner les variables', toastNeedVar: 'Veuillez sélectionner au moins 1 variable indépendante', toastNonNumericExcluded: 'Variable non numérique exclue : colonne {col}', toastVarLimit: 'Il est recommandé de sélectionner au maximum 8 variables.', toastSelectedTopVars: 'Les {n} premières variables numériques ont été sélectionnées', tableEmpty: 'Importez les données Excel pour prévisualiser', headerVar: '(Variable indépendante)', headerNonNumeric: ' - colonnes non numériques non sélectionnables', headerDisabledTitle: 'Les colonnes non numériques ne peuvent pas être utilisées comme variables', headerSelectableTitle: 'Sélectionner comme variable indépendante', fixed: 'Corrigé', missingFilled: 'Les valeurs manquantes ont été remplacées par la moyenne {mean}', occupancyHigh: 'Le taux d’occupation dépassait la plage valide et a été corrigé automatiquement', occupancyLow: 'Le taux d’occupation était inférieur à 0 % et a été corrigé automatiquement', modelSampleLow: 'Nombre d’échantillons insuffisant pour modéliser', matrixNotInvertible: 'La matrice n’est pas inversible. Réduisez les variables fortement corrélées et réessayez.', vifRiskOne: 'La colonne {name} a un VIF={vif}, indiquant un risque élevé de multicolinéarité', vifRiskTwo: 'Les colonnes {a} et {b} sont fortement corrélées. Supprimez-en une pour améliorer la précision.', smallSampleWarn: 'Taille d’échantillon faible (<5), résultats à titre indicatif.', useAdvice: 'Conseil d’utilisation : comparez l’évolution de R² avant et après l’ajout d’une variable. Plus l’augmentation de R² est importante, plus la contribution explicative supplémentaire est forte.', coefExplainLabel: 'Explication des coefficients :', increase: 'augmenter', decrease: 'diminuer', unit: 'unité', percent: '%', r2Text: 'Le modèle explique {pct}% de la variation des effectifs', scatter: 'Nuage', fitLine: 'Ligne ajustée', actualAxis: 'Effectif réel', predictedAxis: 'Effectif prédit', importTypeError: 'Seuls les fichiers .xls / .xlsx sont pris en charge', importEmptyError: 'Aucune donnée valide n’a été lue dans le fichier Excel', targetColMissing: 'La colonne du nombre de personnel n’a pas été reconnue. Vérifiez le format du fichier Excel.', nameColMissing: 'La colonne d’identifiant de l’hôtel n’a pas été reconnue. Vérifiez le format du fichier Excel.', importSuccess: 'Excel importé avec succès. Colonne d’identifiant : {nameCol} ; variable dépendante : {targetCol}', importFailed: 'Échec de l’importation : {msg}', invalidVar: 'La sélection actuelle contient des variables invalides. Veuillez resélectionner.', analysisReady: 'Résultats générés', buildFailed: 'Échec de la modélisation : {msg}', fileReadAndSelect: 'Veuillez d’abord importer les données et sélectionner les variables', chartPointLabel: '{label} : ({x}, {y})'
+      },
+      th: { pageTitle: 'พยากรณ์กำลังคนโรงแรม - การวิเคราะห์แบบง่าย', navSimple: 'วิเคราะห์แบบง่าย', navComplex: 'วิเคราะห์ขั้นสูง', navAnnual: 'รายงานประจำปี', dataPreview: 'ดูข้อมูล', targetLine: 'ตัวแปรตาม: จำนวนพนักงาน (ค่าคงที่เริ่มต้น)', targetLockTitle: 'เป้าหมายการคาดการณ์ถูกกำหนดไว้ตายตัว สามารถเปลี่ยนได้ในโมดูลขั้นสูง', importExcel: 'นำเข้า Excel', toggleAll: 'เลือก/ยกเลิกตัวแปรทั้งหมด', equationTitle: 'สมการพยากรณ์กำลังคน', chartTitle: 'เปรียบเทียบความพอดี', equationEmpty: 'หลังนำเข้าข้อมูลและเลือกตัวแปร ระบบจะแสดงสมการถดถอย คำอธิบายค่าสัมประสิทธิ์ และตัวชี้วัดโมเดลที่นี่', equationEmpty2: 'หลังนำเข้าข้อมูลและเลือกตัวแปร ระบบจะแสดงสมการถดถอย คำแนะนำผลกระทบของตัวแปร คำอธิบายค่าสัมประสิทธิ์ และตัวชี้วัดโมเดลที่นี่', chartDrag: '↕ กล่องกราฟ (ลากได้)', chartHead: '📊 จำนวนพนักงานจริง vs คาดการณ์', chartEmpty: 'หลังสร้างผลลัพธ์แล้ว จะมีกราฟกระจาย “จริง vs คาดการณ์” แสดงที่นี่', generate: 'สร้างผลลัพธ์', generating: 'กำลังสร้าง...', loading: 'กำลังสร้างโมเดล โปรดรอสักครู่...', toastNeedImport: 'กรุณานำเข้าข้อมูล Excel ก่อน', toastNeedImportSelect: 'กรุณานำเข้าข้อมูลและเลือกตัวแปรก่อน', toastNeedVar: 'กรุณาเลือกตัวแปรอิสระอย่างน้อย 1 ตัว', toastNonNumericExcluded: 'ตัดตัวแปรที่ไม่ใช่ตัวเลขออกแล้ว: คอลัมน์ {col}', toastVarLimit: 'แนะนำให้ใช้ตัวแปรไม่เกิน 8 ตัว', toastSelectedTopVars: 'ได้เลือกตัวแปรตัวเลข {n} ตัวแรกให้แล้ว', tableEmpty: 'นำเข้าข้อมูล Excel เพื่อดูตัวอย่าง', headerVar: '(ตัวแปรอิสระ)', headerNonNumeric: ' - คอลัมน์ที่ไม่ใช่ตัวเลขเลือกไม่ได้', headerDisabledTitle: 'คอลัมน์ที่ไม่ใช่ตัวเลขใช้เป็นตัวแปรไม่ได้', headerSelectableTitle: 'เลือกเป็นตัวแปรอิสระ', fixed: 'แก้ไขแล้ว', missingFilled: 'แทนค่าที่หายไปด้วยค่าเฉลี่ย {mean}', occupancyHigh: 'อัตราการเข้าพักเกินช่วงที่เหมาะสมและถูกแก้ไขอัตโนมัติ', occupancyLow: 'อัตราการเข้าพักต่ำกว่า 0% และถูกแก้ไขอัตโนมัติ', modelSampleLow: 'จำนวนตัวอย่างไม่เพียงพอสำหรับการสร้างโมเดล', matrixNotInvertible: 'เมทริกซ์ผกผันไม่ได้ กรุณาลดตัวแปรที่สัมพันธ์กันสูงแล้วลองใหม่', vifRiskOne: 'คอลัมน์ {name} มี VIF={vif} เสี่ยงต่อ multicollinearity สูง', vifRiskTwo: 'คอลัมน์ {a} และ {b} มีความสัมพันธ์สูง ควรลดออก 1 คอลัมน์', smallSampleWarn: 'จำนวนตัวอย่างน้อย (<5) ใช้อ้างอิงเท่านั้น', useAdvice: 'คำแนะนำ: สามารถเปรียบเทียบการเปลี่ยนแปลงของ R² ก่อนและหลังเพิ่มตัวแปรได้ ยิ่งเพิ่มมากยิ่งแปลว่าตัวแปรนั้นช่วยอธิบายข้อมูลได้มากขึ้น', coefExplainLabel: 'คำอธิบายค่าสัมประสิทธิ์:', increase: 'เพิ่ม', decrease: 'ลด', unit: 'หน่วย', percent: '%', r2Text: 'โมเดลอธิบายการเปลี่ยนแปลงจำนวนพนักงานได้ {pct}%', scatter: 'จุดกระจาย', fitLine: 'เส้นฟิต', actualAxis: 'จำนวนจริง', predictedAxis: 'จำนวนคาดการณ์', importTypeError: 'รองรับเฉพาะไฟล์ .xls / .xlsx', importEmptyError: 'ไม่พบข้อมูลที่ถูกต้องในไฟล์ Excel', targetColMissing: 'ไม่พบคอลัมน์จำนวนพนักงาน กรุณาตรวจสอบรูปแบบ Excel', nameColMissing: 'ไม่พบคอลัมน์รหัสโรงแรม กรุณาตรวจสอบรูปแบบ Excel', importSuccess: 'นำเข้า Excel สำเร็จ ระบุคอลัมน์: {nameCol}; ตัวแปรตาม: {targetCol}', importFailed: 'นำเข้าไม่สำเร็จ: {msg}', invalidVar: 'การเลือกปัจจุบันมีตัวแปรไม่ถูกต้อง กรุณาเลือกใหม่', analysisReady: 'สร้างผลวิเคราะห์แล้ว', buildFailed: 'สร้างโมเดลล้มเหลว: {msg}', fileReadAndSelect: 'กรุณานำเข้าข้อมูลและเลือกตัวแปรก่อน', chartPointLabel: '{label}: ({x}, {y})' },
+      id: { pageTitle: 'Prediksi Kebutuhan Staf Hotel - Analisis Sederhana', navSimple: 'Analisis Sederhana', navComplex: 'Analisis Lanjutan', navAnnual: 'Laporan Tahunan', dataPreview: 'Pratinjau Data', targetLine: 'Variabel dependen: Jumlah Staf (tetap secara default)', targetLockTitle: 'Target prediksi bersifat tetap. Gunakan modul lanjutan untuk mengubahnya.', importExcel: 'Impor Excel', toggleAll: 'Pilih/Batal Semua Variabel', equationTitle: 'Persamaan Prediksi Staf', chartTitle: 'Perbandingan Kecocokan', equationEmpty: 'Setelah impor data dan memilih variabel, sistem akan menghasilkan persamaan regresi, penjelasan koefisien, dan metrik model di sini.', equationEmpty2: 'Setelah impor data dan memilih variabel, sistem akan menghasilkan persamaan regresi, petunjuk dampak variabel, penjelasan koefisien, dan metrik model di sini.', chartDrag: '↕ Kontainer Grafik (dapat digeser)', chartHead: '📊 Staf Aktual vs Prediksi', chartEmpty: 'Setelah hasil dibuat, diagram sebar “Staf Aktual vs Prediksi” akan muncul di sini.', generate: 'Buat Hasil', generating: 'Membuat...', loading: 'Membangun model, mohon tunggu...', toastNeedImport: 'Silakan impor data Excel terlebih dahulu', toastNeedImportSelect: 'Silakan impor data dan pilih variabel terlebih dahulu', toastNeedVar: 'Pilih minimal 1 variabel independen', toastNonNumericExcluded: 'Variabel non-numerik dikecualikan: kolom {col}', toastVarLimit: 'Disarankan maksimal 8 variabel. Gunakan indikator inti.', toastSelectedTopVars: '{n} variabel numerik pertama telah dipilih', tableEmpty: 'Impor data Excel untuk pratinjau', headerVar: '(Variabel independen)', headerNonNumeric: ' - kolom non-numerik tidak dapat dipilih', headerDisabledTitle: 'Kolom non-numerik tidak dapat digunakan sebagai variabel', headerSelectableTitle: 'Pilih sebagai variabel independen', fixed: 'Disesuaikan', missingFilled: 'Nilai kosong diisi dengan rata-rata {mean}', occupancyHigh: 'Tingkat hunian melebihi rentang wajar dan telah diperbaiki otomatis', occupancyLow: 'Tingkat hunian di bawah 0% dan telah diperbaiki otomatis', modelSampleLow: 'Jumlah sampel tidak cukup untuk membangun model', matrixNotInvertible: 'Matriks tidak dapat diinvers. Kurangi variabel yang sangat berkorelasi lalu coba lagi.', vifRiskOne: 'Kolom {name} memiliki VIF={vif}, ada risiko multikolinearitas tinggi', vifRiskTwo: 'Kolom {a} dan {b} sangat berkorelasi. Hapus satu untuk meningkatkan akurasi koefisien.', smallSampleWarn: 'Ukuran sampel kecil (<5), hasil hanya untuk referensi.', useAdvice: 'Saran penggunaan: bandingkan perubahan R² sebelum dan sesudah menambahkan variabel. Kenaikan R² yang lebih besar berarti kontribusi penjelasan yang lebih tinggi.', coefExplainLabel: 'Penjelasan koefisien:', increase: 'bertambah', decrease: 'berkurang', unit: 'unit', percent: '%', r2Text: 'Model menjelaskan {pct}% variasi jumlah staf', scatter: 'Sebar', fitLine: 'Garis Fit', actualAxis: 'Staf Aktual', predictedAxis: 'Staf Prediksi', importTypeError: 'Hanya file .xls / .xlsx yang didukung', importEmptyError: 'Tidak ada data valid yang dibaca dari file Excel', targetColMissing: 'Kolom jumlah staf tidak dikenali. Periksa format Excel.', nameColMissing: 'Kolom identitas hotel tidak dikenali. Periksa format Excel.', importSuccess: 'Excel berhasil diimpor. Kolom identitas: {nameCol}; variabel dependen: {targetCol}', importFailed: 'Impor gagal: {msg}', invalidVar: 'Pilihan saat ini berisi variabel tidak valid. Silakan pilih ulang.', analysisReady: 'Hasil analisis telah dibuat', buildFailed: 'Pembuatan model gagal: {msg}', fileReadAndSelect: 'Silakan impor data dan pilih variabel terlebih dahulu', chartPointLabel: '{label}: ({x}, {y})' },
+      my: { pageTitle: 'ဟိုတယ်ဝန်ထမ်းခန့်မှန်းခြင်း - ရိုးရှင်းသောခွဲခြမ်းစိတ်ဖြာမှု', navSimple: 'ရိုးရှင်းသော分析', navComplex: 'အဆင့်မြင့်分析', navAnnual: 'နှစ်ပတ်လည်အစီရင်ခံစာ', dataPreview: 'ဒေတာအကြိုကြည့်ရှု', targetLine: 'အ依赖变量: ဝန်ထမ်းအရေအတွက် (မူလအတိုင်းသတ်မှတ်ထားသည်)', targetLockTitle: 'ခန့်မှန်းပစ်မှတ်ကို တည်ငြိမ်စွာသတ်မှတ်ထားသည်။ အဆင့်မြင့်မော်ဂျူးတွင် ပြင်ဆင်နိုင်သည်။', importExcel: 'Excel တင်သွင်းရန်', toggleAll: 'အားလုံးရွေး/မရွေး', equationTitle: 'ဝန်ထမ်းခန့်မှန်းညီမျှချက်', chartTitle: 'ကိုက်ညီမှုနှိုင်းယှဉ်ချက်', equationEmpty: 'ဒေတာတင်သွင်းပြီး variable များရွေးချယ်လျှင် regression equation၊ coefficient ရှင်းလင်းချက်နှင့် model metrics များကို ဤနေရာတွင်ဖော်ပြပါမည်။', equationEmpty2: 'ဒေတာတင်သွင်းပြီး variable များရွေးချယ်လျှင် regression equation၊ variable impact tips၊ coefficient ရှင်းလင်းချက်နှင့် model metrics များကို ဤနေရာတွင်ဖော်ပြပါမည်။', chartDrag: '↕ ဂရပ်ကွန်တိန်နာ (ဆွဲရွှေ့နိုင်သည်)', chartHead: '📊 အမှန်ဝန်ထမ်း vs ခန့်မှန်းဝန်ထမ်း', chartEmpty: 'ရလဒ်ထုတ်ပြီးနောက် “အမှန်ဝန်ထမ်း vs ခန့်မှန်းဝန်ထမ်း” scatter plot ကို ဤနေရာတွင်ပြသမည်။', generate: 'ရလဒ်ထုတ်ရန်', generating: 'ထုတ်လုပ်နေသည်...', loading: 'မော်ဒယ်တည်ဆောက်နေသည်၊ ခဏစောင့်ပါ...', toastNeedImport: 'Excel ဒေတာကို အရင်တင်သွင်းပါ', toastNeedImportSelect: 'ဒေတာတင်သွင်းပြီး variable များရွေးပါ', toastNeedVar: 'အနည်းဆုံး independent variable ၁ ခုရွေးပါ', toastNonNumericExcluded: 'ဂဏန်းမဟုတ်သော variable ကိုဖယ်ရှားခဲ့သည်: {col}', toastVarLimit: 'variable 8 ခုအထိသာ အကြံပြုသည်', toastSelectedTopVars: 'ပထမဆုံး numeric variable {n} ခုကိုရွေးထားပေးသည်', tableEmpty: 'Excel ဒေတာတင်သွင်းပြီး အကြိုကြည့်ရှုပါ', headerVar: '(Independent variable)', headerNonNumeric: ' - ဂဏန်းမဟုတ်သောကော်လံ မရွေးနိုင်ပါ', headerDisabledTitle: 'ဂဏန်းမဟုတ်သောကော်လံကို variable အဖြစ်မသုံးနိုင်ပါ', headerSelectableTitle: 'independent variable အဖြစ်ရွေးရန်', fixed: 'ပြင်ဆင်ပြီး', missingFilled: 'ပျောက်နေသောတန်ဖိုးများကို ပျမ်းမျှ {mean} ဖြင့်ဖြည့်ထားသည်', occupancyHigh: '入住率 သင့်လျော်ရာအတိုင်းအတာထက်ကျော်လွန်ပြီး အလိုအလျောက်ပြင်ဆင်ထားသည်', occupancyLow: '入住率 0% အောက်ဖြစ်ပြီး အလိုအလျောက်ပြင်ဆင်ထားသည်', modelSampleLow: 'မော်ဒယ်တည်ဆောက်ရန် sample မလုံလောက်ပါ', matrixNotInvertible: 'matrix ကို inverse မလုပ်နိုင်ပါ။ ဆက်စပ်မှုမြင့်သော variable များလျှော့ပြီး ပြန်စမ်းပါ။', vifRiskOne: '{name} ကော်လံ၏ VIF={vif} ဖြစ်ပြီး multicollinearity အန္တရာယ်မြင့်သည်', vifRiskTwo: '{a} နှင့် {b} ကော်လံများ အလွန်ဆက်စပ်နေသည်။ coefficient တိကျမှုတိုးရန် ၁ ကော်လံလျှော့ပါ။', smallSampleWarn: 'sample နည်းသည် (<5)။ ရည်ညွှန်းချက်အဖြစ်သာသုံးပါ။', useAdvice: 'အသုံးပြုရန်အကြံပြုချက် - variable တစ်ခုစီကိုသီးခြားသို့မဟုတ်ပေါင်းစပ်ရွေးပြီး R² ပြောင်းလဲမှုကိုနှိုင်းယှဉ်နိုင်သည်။', coefExplainLabel: 'Coefficient ရှင်းလင်းချက်:', increase: 'တိုး', decrease: 'လျော့', unit: 'ယူနစ်', percent: '%', r2Text: 'မော်ဒယ်သည် ဝန်ထမ်းအရေအတွက်ပြောင်းလဲမှု၏ {pct}% ကိုရှင်းပြနိုင်သည်', scatter: 'Scatter', fitLine: 'Fit Line', actualAxis: 'အမှန်ဝန်ထမ်း', predictedAxis: 'ခန့်မှန်းဝန်ထမ်း', importTypeError: '.xls / .xlsx ဖိုင်များသာပံ့ပိုးသည်', importEmptyError: 'Excel ဖိုင်မှ မှန်ကန်သောဒေတာမဖတ်ရပါ', targetColMissing: 'ဝန်ထမ်းအရေအတွက်ကော်လံကိုမတွေ့ပါ။ Excel format စစ်ဆေးပါ။', nameColMissing: 'ဟိုတယ်အမှတ်အသားကော်လံကိုမတွေ့ပါ။ Excel format စစ်ဆေးပါ။', importSuccess: 'Excel တင်သွင်းမှုအောင်မြင်သည်။ identifier column: {nameCol}; dependent variable: {targetCol}', importFailed: 'တင်သွင်းမှုမအောင်မြင်ပါ: {msg}', invalidVar: 'ရွေးချယ်ထားမှုတွင် invalid variable များပါဝင်နေသည်။ ပြန်ရွေးပါ။', analysisReady: 'ခွဲခြမ်းစိတ်ဖြာရလဒ် ထုတ်ပြီး', buildFailed: 'မော်ဒယ်တည်ဆောက်မှုမအောင်မြင်ပါ: {msg}', fileReadAndSelect: 'ဒေတာတင်သွင်းပြီး variable များရွေးပါ', chartPointLabel: '{label}: ({x}, {y})' },
+      vi: { pageTitle: 'Dự báo nhân sự khách sạn - Phân tích đơn giản', navSimple: 'Phân tích đơn giản', navComplex: 'Phân tích nâng cao', navAnnual: 'Báo cáo năm', dataPreview: 'Xem trước dữ liệu', targetLine: 'Biến phụ thuộc: Số lượng nhân sự (mặc định cố định)', targetLockTitle: 'Mục tiêu dự báo được cố định. Chuyển sang mô-đun nâng cao để chỉnh sửa.', importExcel: 'Nhập Excel', toggleAll: 'Chọn/Bỏ chọn tất cả', equationTitle: 'Phương trình dự báo nhân sự', chartTitle: 'So sánh độ phù hợp', equationEmpty: 'Sau khi nhập dữ liệu và chọn biến, hệ thống sẽ tạo phương trình hồi quy, giải thích hệ số và chỉ số mô hình tại đây.', equationEmpty2: 'Sau khi nhập dữ liệu và chọn biến, hệ thống sẽ tạo phương trình hồi quy, gợi ý tác động biến, giải thích hệ số và chỉ số mô hình tại đây.', chartDrag: '↕ Khung biểu đồ (có thể kéo)', chartHead: '📊 Nhân sự thực tế vs dự báo', chartEmpty: 'Sau khi tạo kết quả, biểu đồ phân tán “Thực tế vs Dự báo” sẽ hiển thị tại đây.', generate: 'Tạo kết quả', generating: 'Đang tạo...', loading: 'Đang xây dựng mô hình, vui lòng chờ...', toastNeedImport: 'Vui lòng nhập dữ liệu Excel trước', toastNeedImportSelect: 'Vui lòng nhập dữ liệu và chọn biến trước', toastNeedVar: 'Vui lòng chọn ít nhất 1 biến độc lập', toastNonNumericExcluded: 'Đã loại biến không phải số: cột {col}', toastVarLimit: 'Khuyến nghị tối đa 8 biến. Hãy giữ các chỉ số cốt lõi.', toastSelectedTopVars: 'Đã chọn {n} biến số đầu tiên cho bạn', tableEmpty: 'Nhập dữ liệu Excel để xem trước', headerVar: '(Biến độc lập)', headerNonNumeric: ' - cột không phải số không thể chọn', headerDisabledTitle: 'Cột không phải số không thể dùng làm biến', headerSelectableTitle: 'Chọn làm biến độc lập', fixed: 'Đã điều chỉnh', missingFilled: 'Giá trị thiếu đã được điền bằng trung bình {mean}', occupancyHigh: 'Tỷ lệ lấp đầy vượt phạm vi hợp lý và đã được tự động điều chỉnh', occupancyLow: 'Tỷ lệ lấp đầy dưới 0% và đã được tự động điều chỉnh', modelSampleLow: 'Không đủ mẫu để xây dựng mô hình', matrixNotInvertible: 'Ma trận không khả nghịch. Hãy giảm các biến tương quan cao rồi thử lại.', vifRiskOne: 'Cột {name} có VIF={vif}, có rủi ro đa cộng tuyến cao', vifRiskTwo: 'Cột {a} và {b} tương quan cao. Hãy bớt 1 cột để tăng độ chính xác.', smallSampleWarn: 'Cỡ mẫu nhỏ (<5), kết quả chỉ mang tính tham khảo.', useAdvice: 'Gợi ý sử dụng: Có thể so sánh mức thay đổi R² trước và sau khi thêm biến. R² tăng càng rõ thì biến đó đóng góp giải thích càng lớn.', coefExplainLabel: 'Giải thích hệ số:', increase: 'tăng', decrease: 'giảm', unit: 'đơn vị', percent: '%', r2Text: 'Mô hình giải thích {pct}% biến động số lượng nhân sự', scatter: 'Phân tán', fitLine: 'Đường khớp', actualAxis: 'Nhân sự thực tế', predictedAxis: 'Nhân sự dự báo', importTypeError: 'Chỉ hỗ trợ tệp .xls / .xlsx', importEmptyError: 'Không đọc được dữ liệu hợp lệ từ tệp Excel', targetColMissing: 'Không nhận diện được cột số lượng nhân sự. Vui lòng kiểm tra định dạng Excel.', nameColMissing: 'Không nhận diện được cột định danh khách sạn. Vui lòng kiểm tra định dạng Excel.', importSuccess: 'Đã nhập Excel thành công. Cột định danh: {nameCol}; biến phụ thuộc: {targetCol}', importFailed: 'Nhập thất bại: {msg}', invalidVar: 'Lựa chọn hiện tại chứa biến không hợp lệ. Vui lòng chọn lại.', analysisReady: 'Đã tạo kết quả phân tích', buildFailed: 'Xây dựng mô hình thất bại: {msg}', fileReadAndSelect: 'Vui lòng nhập dữ liệu và chọn biến trước', chartPointLabel: '{label}: ({x}, {y})' }
+    };
+
+    function t(key, vars = {}) {
+      const langPack = I18N[state.lang] || I18N.zh;
+      const fallback = I18N.zh[key] || key;
+      const template = langPack[key] || fallback;
+      return String(template).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+    }
+
+    function getHtmlLang(code) {
+      return ({ zh: 'zh-CN', en: 'en', fr: 'fr', th: 'th', id: 'id', my: 'my', vi: 'vi' })[code] || 'zh-CN';
+    }
+
+    function renderLanguageMenu() {
+      els.langMenu.innerHTML = LANG_OPTIONS.map(item => `
+        <button type="button" data-lang="${item.code}" class="${state.lang === item.code ? 'active' : ''}">${item.label}</button>
+      `).join('');
+      els.langMenu.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.lang = btn.dataset.lang;
+          applyLanguage();
+          els.langMenu.classList.remove('open');
+        });
+      });
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = getHtmlLang(state.lang);
+      document.title = t('pageTitle');
+      els.langTrigger.title = LANG_OPTIONS.find(x => x.code === state.lang)?.label || t('navSimple');
+      els.navSimpleBtn.childNodes[0].nodeValue = t('navSimple');
+      els.navComplexBtn.textContent = t('navComplex');
+      els.navAnnualBtn.textContent = t('navAnnual');
+      els.dataPreviewTitle.textContent = t('dataPreview');
+      els.targetLineText.textContent = t('targetLine');
+      els.targetLock.title = t('targetLockTitle');
+      els.importBtn.textContent = t('importExcel');
+      els.toggleAllBtn.textContent = t('toggleAll');
+      els.equationTitle.textContent = t('equationTitle');
+      els.chartTitle.textContent = t('chartTitle');
+      els.chartDragText.textContent = t('chartDrag');
+      els.chartHeadTitle.textContent = t('chartHead');
+      els.chartEmpty.textContent = t('chartEmpty');
+      els.loadingText.textContent = t('loading');
+      updateGenerateBtn();
+      renderTable();
+      renderEquation(state.modelResult);
+      renderChart(state.modelResult);
+      renderLanguageMenu();
+    }
 
     function showToast(type, text) {
       els.toast.className = 'toast ' + type;
@@ -652,16 +896,17 @@
 
     function setLoading(flag) {
       els.loadingMask.style.display = flag ? 'flex' : 'none';
-      els.generateBtn.textContent = flag ? '生成中...' : '生成分析结果';
+      els.generateBtn.textContent = flag ? t('generating') : t('generate');
+      els.loadingText.textContent = t('loading');
     }
 
     function updateGenerateBtn() {
       const ready = state.processedRows.length > 0 && state.selectedVars.length > 0;
       els.generateBtn.disabled = !ready;
       if (!state.processedRows.length) {
-        els.generateBtn.title = '请先导入数据并勾选自变量';
+        els.generateBtn.title = t('toastNeedImportSelect');
       } else if (!state.selectedVars.length) {
-        els.generateBtn.title = '请至少勾选1个自变量';
+        els.generateBtn.title = t('toastNeedVar');
       } else {
         els.generateBtn.title = '';
       }
@@ -681,7 +926,7 @@
 
     function formatCell(v) {
       return typeof v === 'number'
-        ? Number(v).toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+        ? Number(v).toLocaleString(getHtmlLang(state.lang), { maximumFractionDigits: 2 })
         : String(v ?? '');
     }
 
@@ -718,6 +963,97 @@
       return headers.find(h => isTargetColumn(h));
     }
 
+    function normalizeSymbol(value) {
+      return String(value || '').trim().toUpperCase();
+    }
+
+    function isValidTargetSymbol(value) {
+      return normalizeSymbol(value) === 'Y';
+    }
+
+    function isValidFeatureSymbol(value) {
+      return /^X\d+$/i.test(String(value || '').trim());
+    }
+
+    function buildHeaderConfigFromSheet(sheetRows) {
+      const nonEmptyRows = sheetRows
+        .map(row => row.map(cell => cell === undefined || cell === null ? '' : String(cell).trim()))
+        .filter(row => row.some(cell => cell !== ''));
+
+      if (!nonEmptyRows.length) {
+        throw new Error(t('importEmptyError'));
+      }
+
+      const headerRow = nonEmptyRows[0];
+      const symbolRow = nonEmptyRows[1] || [];
+      const hasSymbolRow = headerRow.some((header, idx) => {
+        if (!header) return false;
+        const symbol = symbolRow[idx] || '';
+        return isValidTargetSymbol(symbol) || isValidFeatureSymbol(symbol);
+      });
+
+      const headers = headerRow.map((header, idx) => header || `Column${idx + 1}`);
+      const displayHeaders = {};
+      const variableSymbols = {};
+      const symbolToHeader = {};
+
+      headers.forEach((header, idx) => {
+        displayHeaders[header] = header;
+        if (hasSymbolRow) {
+          const symbol = normalizeSymbol(symbolRow[idx] || '');
+          if (symbol && (isValidTargetSymbol(symbol) || isValidFeatureSymbol(symbol))) {
+            variableSymbols[header] = symbol;
+            symbolToHeader[symbol] = header;
+          }
+        }
+      });
+
+      const dataStartIndex = hasSymbolRow ? 2 : 1;
+      const dataRows = nonEmptyRows.slice(dataStartIndex).map(row => {
+        const obj = {};
+        headers.forEach((header, idx) => {
+          obj[header] = row[idx] ?? '';
+        });
+        return obj;
+      });
+
+      return { headers, dataRows, displayHeaders, variableSymbols, symbolToHeader, hasSymbolRow };
+    }
+
+    function getTargetColumnBySymbol(headers, variableSymbols) {
+      return headers.find(header => variableSymbols[header] === 'Y') || null;
+    }
+
+    function buildAutoVariableSymbols(headers, nameColumn, targetColumn) {
+      const variableSymbols = {};
+      const symbolToHeader = {};
+      if (targetColumn) {
+        variableSymbols[targetColumn] = 'Y';
+        symbolToHeader['Y'] = targetColumn;
+      }
+      let featureIndex = 1;
+      headers.forEach(header => {
+        if (header === nameColumn || header === targetColumn) return;
+        if (isTargetColumn(header)) return;
+        const symbol = `X${featureIndex}`;
+        variableSymbols[header] = symbol;
+        symbolToHeader[symbol] = header;
+        featureIndex += 1;
+      });
+      return { variableSymbols, symbolToHeader };
+    }
+
+    function getHeaderLabel(header) {
+      return state.displayHeaders[header] || header;
+    }
+
+    function getSymbolLabel(header, fallbackIndex = null) {
+      const existing = state.variableSymbols[header];
+      if (existing) return existing;
+      if (header === state.targetColumn) return state.targetSymbol || 'Y';
+      return fallbackIndex !== null ? `X${fallbackIndex + 1}` : header;
+    }
+
     function preprocessData(rows, headers) {
       const issues = {};
       const fixNotes = {};
@@ -750,17 +1086,17 @@
           let value = toNumber(row[col]);
           if (!Number.isFinite(value)) {
             value = means[col];
-            issues[`${rowIdx}-${col}`] = `缺失值已用均值 ${means[col].toFixed(2)} 填充`;
+            issues[`${rowIdx}-${col}`] = t('missingFilled', { mean: means[col].toFixed(2) });
             fixNotes[col] = true;
           }
           if (col.includes('入住率')) {
             if (value > 100) {
               value = 100;
-              issues[`${rowIdx}-${col}`] = '入住率超出合理范围，已自动修正';
+              issues[`${rowIdx}-${col}`] = t('occupancyHigh');
               fixNotes[col] = true;
             } else if (value < 0) {
               value = 0;
-              issues[`${rowIdx}-${col}`] = '入住率低于0%，已自动修正';
+              issues[`${rowIdx}-${col}`] = t('occupancyLow');
               fixNotes[col] = true;
             }
           }
@@ -777,22 +1113,24 @@
       const previewRows = state.processedRows.slice(0, 80);
       if (!headers.length) {
         els.tableHead.innerHTML = '';
-        els.tableBody.innerHTML = `<tr><td class="empty-cell">请导入 Excel 数据后预览</td></tr>`;
+        els.tableBody.innerHTML = `<tr><td class="empty-cell">${t('tableEmpty')}</td></tr>`;
         return;
       }
 
       els.tableHead.innerHTML = '<tr>' + headers.map(header => {
-        const isVar = header !== (state.nameColumn || REQUIRED_NAME_COL) && !isTargetColumn(header);
+        const isVar = header !== (state.nameColumn || REQUIRED_NAME_COL) && header !== state.targetColumn && !isTargetColumn(header);
         const isNumeric = state.numericColumns.includes(header);
         const checked = state.selectedVars.includes(header);
+        const displayHeader = state.displayHeaders[header] || header;
+        const symbol = state.variableSymbols[header];
         return `
           <th class="${checked ? 'selected-col' : ''}">
             <div class="th-inner">
-              ${isVar ? `<input type="checkbox" ${checked ? 'checked' : ''} ${!isNumeric ? 'disabled' : ''} data-col="${header}" title="${!isNumeric ? '非数值列不可作为自变量' : '选择为自变量'}" />` : ''}
-              <span>${header}</span>
+              ${isVar ? `<input type="checkbox" ${checked ? 'checked' : ''} ${!isNumeric ? 'disabled' : ''} data-col="${header}" title="${!isNumeric ? t('headerDisabledTitle') : t('headerSelectableTitle')}" />` : ''}
+              <span>${displayHeader}</span>
             </div>
-            ${isVar ? `<div class="header-meta">（自变量）${!isNumeric ? ' - 非数值列不可选' : ''}</div>` : ''}
-            ${state.columnFixNotes[header] ? '<div class="header-fix">已修正</div>' : ''}
+            ${symbol ? `<div class="header-meta">${symbol}${isVar ? ' ' + t('headerVar') : ''}${!isVar && header === state.targetColumn ? '（Y）' : ''}${!isNumeric && isVar ? t('headerNonNumeric') : ''}</div>` : `${isVar ? `<div class="header-meta">${t('headerVar')}${!isNumeric ? t('headerNonNumeric') : ''}</div>` : ''}`}
+            ${state.columnFixNotes[header] ? `<div class="header-fix">${t('fixed')}</div>` : ''}
           </th>
         `;
       }).join('') + '</tr>';
@@ -804,7 +1142,7 @@
           const classes = [selected ? 'selected-col' : '', issue ? 'warning-cell' : ''].join(' ');
           return `<td class="${classes}" title="${issue || ''}">${formatCell(row[header])}</td>`;
         }).join('') + '</tr>';
-      }).join('') : `<tr><td class="empty-cell" colspan="${headers.length}">请导入 Excel 数据后预览</td></tr>`;
+      }).join('') : `<tr><td class="empty-cell" colspan="${headers.length}">${t('tableEmpty')}</td></tr>`;
 
       els.tableHead.querySelectorAll('input[type="checkbox"]').forEach(input => {
         input.addEventListener('change', () => toggleVar(input.dataset.col));
@@ -813,7 +1151,7 @@
 
     function toggleVar(col) {
       if (!state.numericColumns.includes(col)) {
-        showToast('warning', `已排除非数值型自变量：${col}列`);
+        showToast('warning', t('toastNonNumericExcluded', { col }));
         return;
       }
       const exists = state.selectedVars.includes(col);
@@ -821,7 +1159,7 @@
         state.selectedVars = state.selectedVars.filter(x => x !== col);
       } else {
         if (state.selectedVars.length >= MAX_FEATURES) {
-          showToast('warning', '自变量数量建议≤8个，请保留核心指标');
+          showToast('warning', t('toastVarLimit'));
           return;
         }
         state.selectedVars.push(col);
@@ -832,7 +1170,7 @@
 
     function toggleAll() {
       if (!state.processedRows.length) {
-        showToast('warning', '请先导入Excel数据');
+        showToast('warning', t('toastNeedImport'));
         return;
       }
 
@@ -848,7 +1186,7 @@
       } else {
         state.selectedVars = selectableVars.slice(0, MAX_FEATURES);
         if (selectableVars.length > MAX_FEATURES) {
-          showToast('warning', `已为你勾选前${MAX_FEATURES}个数值型自变量`);
+          showToast('warning', t('toastSelectedTopVars', { n: MAX_FEATURES }));
         }
       }
       renderTable();
@@ -888,7 +1226,7 @@
         if (Math.abs(pivot) < 1e-12) {
           let swap = i + 1;
           while (swap < n && Math.abs(aug[swap][i]) < 1e-12) swap++;
-          if (swap === n) throw new Error('矩阵不可逆，请减少高度相关变量后重试');
+          if (swap === n) throw new Error(t('matrixNotInvertible'));
           [aug[i], aug[swap]] = [aug[swap], aug[i]];
           pivot = aug[i][i];
         }
@@ -946,7 +1284,7 @@
     }
 
     function buildModel(rows, features, targetName) {
-      if (rows.length < 2) throw new Error('样本量不足，无法建模');
+      if (rows.length < 2) throw new Error(t('modelSampleLow'));
 
       const Xraw = rows.map(row => features.map(f => toNumber(row[f])));
       const y = rows.map(row => toNumber(row[targetName]));
@@ -974,15 +1312,15 @@
       const warnings = [];
       const highVif = vifList.filter(item => item.vif > 10);
       if (highVif.length >= 2) {
-        warnings.push(`${highVif[0].name}与${highVif[1].name}列相关性较高，建议减少1列以提升系数准确性`);
+        warnings.push(t('vifRiskTwo', { a: highVif[0].name, b: highVif[1].name }));
       } else if (highVif.length === 1) {
-        warnings.push(`${highVif[0].name}列VIF=${highVif[0].vif.toFixed(2)}，存在较强共线性风险`);
+        warnings.push(t('vifRiskOne', { name: highVif[0].name, vif: highVif[0].vif.toFixed(2) }));
       }
-      if (rows.length < 5) warnings.push('样本量较少（<5个），预测结果仅供参考');
+      if (rows.length < 5) warnings.push(t('smallSampleWarn'));
 
       return {
         intercept,
-        coefficients: features.map((name, i) => ({ name, value: slopes[i] })),
+        coefficients: features.map((name, i) => ({ name, symbol: getSymbolLabel(name, i), value: slopes[i] })),
         points: y.map((actual, i) => ({ actual, predicted: predicted[i] })),
         r2,
         mae,
@@ -1014,21 +1352,28 @@
     function renderEquation(modelResult) {
       if (!modelResult) {
         els.equationContent.className = 'empty-result';
-        els.equationContent.innerHTML = '导入数据并勾选自变量后，系统将在此生成回归方程、变量影响判断提示、系数解释和模型指标。';
+        els.equationContent.innerHTML = t('equationEmpty2');
         return;
       }
+
+      const targetLabel = state.targetSymbol || 'Y';
+      const mappingHtml = [
+        `<div><strong>${targetLabel}</strong> = ${getHeaderLabel(state.targetColumn || REQUIRED_TARGET_COL)}</div>`,
+        ...modelResult.coefficients.map(item => `<div><strong>${item.symbol}</strong> = ${getHeaderLabel(item.name)}</div>`)
+      ].join('');
 
       const equationHtml = `
         <div class="equation-panel">
           <div class="equation-box">
             <div class="equation-wrap">
               <div id="equation-fit" class="equation-fit">
-                <span class="equation-y">y = 人员配置人数</span>
+                <span class="equation-y">${targetLabel}</span>
+                <span class="equation-op">=</span>
                 <span class="equation-intercept">${modelResult.intercept.toFixed(1)}</span>
                 ${modelResult.coefficients.map(item => `
                   <span class="equation-term">
                     <span class="equation-op">${item.value >= 0 ? '+' : '-'}</span>
-                    <span class="equation-coef">${Math.abs(item.value).toFixed(2)}×</span><span class="equation-var" title="${item.name}">${item.name}</span>
+                    <span class="equation-coef">${Math.abs(item.value).toFixed(2)}×</span><span class="equation-var" title="${getHeaderLabel(item.name)}">${item.symbol}</span>
                   </span>
                 `).join('')}
               </div>
@@ -1036,11 +1381,13 @@
           </div>
           <div class="equation-info-box">
             <div class="equation-guide">
-              使用建议：可通过单独勾选或组合勾选自变量，比较某变量加入前后 R² 的变化。R² 提升越明显，说明该变量对当前样本的增量解释贡献越大；若提升很小，则说明贡献有限或与其他变量信息重复。
+              ${t('useAdvice')}
             </div>
             <div class="explain-text-wrap">
               <div class="explain-text">
-                系数说明：${modelResult.coefficients.map((item, idx) => `${idx > 0 ? '；' : ''}${item.name}每增加1${item.name.includes('率') ? '%' : '单位'}，人员配置需${item.value >= 0 ? '增加' : '减少'}${Math.abs(item.value).toFixed(2)}人`).join('')}；R²=${modelResult.r2.toFixed(2)}（模型可解释${(modelResult.r2 * 100).toFixed(0)}%的人员数变化）；MAE=${modelResult.mae.toFixed(1)}人。
+                ${t('coefExplainLabel')} ${modelResult.coefficients.map((item, idx) => `${idx > 0 ? '；' : ''}${item.symbol}${item.value >= 0 ? t('increase') : t('decrease')} 1${getHeaderLabel(item.name).includes('率') ? t('percent') : t('unit')} → ${Math.abs(item.value).toFixed(2)}（${getHeaderLabel(item.name)}）`).join('')}；R²=${modelResult.r2.toFixed(2)}（${t('r2Text', { pct: (modelResult.r2 * 100).toFixed(0) })}）；MAE=${modelResult.mae.toFixed(1)}。
+                <div style="margin-top:10px;"><strong>变量符号对照：</strong></div>
+                <div style="margin-top:6px; line-height:1.9;">${mappingHtml}</div>
               </div>
             </div>
           </div>
@@ -1091,12 +1438,12 @@
         data: {
           datasets: [
             {
-              label: '散点',
+              label: t('scatter'),
               data: modelResult.points.map(p => ({ x: p.actual, y: p.predicted })),
               backgroundColor: '#2E86AB'
             },
             {
-              label: '拟合线',
+              label: t('fitLine'),
               type: 'line',
               data: fitLine,
               borderColor: '#C73E1D',
@@ -1118,18 +1465,18 @@
             },
             tooltip: {
               callbacks: {
-                label: (ctx) => `${ctx.dataset.label}: (${Number(ctx.parsed.x).toFixed(2)}, ${Number(ctx.parsed.y).toFixed(2)})`
+                label: (ctx) => t('chartPointLabel', { label: ctx.dataset.label, x: Number(ctx.parsed.x).toFixed(2), y: Number(ctx.parsed.y).toFixed(2) })
               }
             }
           },
           scales: {
             x: {
-              title: { display: true, text: '实际人员数', color: '#333', font: { size: 12 } },
+              title: { display: true, text: t('actualAxis'), color: '#333', font: { size: 12 } },
               ticks: { color: '#333' },
               grid: { color: '#eee' }
             },
             y: {
-              title: { display: true, text: '预测人员数', color: '#333', font: { size: 12 } },
+              title: { display: true, text: t('predictedAxis'), color: '#333', font: { size: 12 } },
               ticks: { color: '#333' },
               grid: { color: '#eee' }
             }
@@ -1141,38 +1488,47 @@
     async function handleFile(file) {
       const lower = file.name.toLowerCase();
       if (!lower.endsWith('.xls') && !lower.endsWith('.xlsx')) {
-        showToast('error', '仅支持上传 .xls / .xlsx 文件');
+        showToast('error', t('importTypeError'));
         return;
       }
       try {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        const sheetRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
-        if (!json.length) {
-          showToast('error', 'Excel 中未读取到有效数据');
+        const { headers, dataRows, displayHeaders, variableSymbols, symbolToHeader } = buildHeaderConfigFromSheet(sheetRows);
+        if (!dataRows.length) {
+          showToast('error', t('importEmptyError'));
           return;
         }
 
-        const headers = Object.keys(json[0] || {});
-        const detectedTargetCol = getTargetColumn(headers);
-        const detectedNameCol = getNameColumn(headers, json);
+        const detectedNameCol = getNameColumn(headers, dataRows);
+        const targetBySymbol = getTargetColumnBySymbol(headers, variableSymbols);
+        const detectedTargetCol = targetBySymbol || getTargetColumn(headers);
         if (!detectedTargetCol) {
-          showToast('error', '未识别到人员配置人数列，请确认Excel格式');
+          showToast('error', t('targetColMissing'));
           return;
         }
         if (!detectedNameCol) {
-          showToast('error', '未识别到酒店标识列，请确认Excel格式');
+          showToast('error', t('nameColMissing'));
           return;
         }
 
-        const { rows, issues, fixNotes, numericCols } = preprocessData(json, headers);
-        state.rawRows = json;
+        const fallbackSymbols = buildAutoVariableSymbols(headers, detectedNameCol, detectedTargetCol);
+        const mergedVariableSymbols = { ...fallbackSymbols.variableSymbols, ...variableSymbols };
+        const mergedSymbolToHeader = { ...fallbackSymbols.symbolToHeader, ...symbolToHeader };
+
+        const { rows, issues, fixNotes, numericCols } = preprocessData(dataRows, headers);
+        state.rawRows = dataRows;
         state.nameColumn = detectedNameCol;
         state.targetColumn = detectedTargetCol;
+        state.targetSymbol = mergedVariableSymbols[detectedTargetCol] || 'Y';
         state.processedRows = rows;
         state.headers = headers;
+        state.displayHeaders = displayHeaders;
+        state.variableSymbols = mergedVariableSymbols;
+        state.symbolToHeader = mergedSymbolToHeader;
         state.issuesByCell = issues;
         state.columnFixNotes = fixNotes;
         state.numericColumns = numericCols.filter(c => c !== state.nameColumn && c !== state.targetColumn && !isTargetColumn(c));
@@ -1186,19 +1542,19 @@
         renderEquation(null);
         renderChart(null);
         updateGenerateBtn();
-        showToast('success', `Excel 导入成功，已识别标识列：${detectedNameCol}；因变量列：${detectedTargetCol}`);
+        showToast('success', t('importSuccess', { nameCol: detectedNameCol, targetCol: detectedTargetCol }));
       } catch (err) {
-        showToast('error', '导入失败：' + err.message);
+        showToast('error', t('importFailed', { msg: err.message }));
       }
     }
 
     async function generateModel() {
       if (!state.processedRows.length) {
-        showToast('error', '请先导入Excel数据');
+        showToast('error', t('toastNeedImport'));
         return;
       }
       if (!state.selectedVars.length) {
-        showToast('error', '请至少勾选1个自变量');
+        showToast('error', t('toastNeedVar'));
         return;
       }
       setLoading(true);
@@ -1214,18 +1570,29 @@
           renderTable();
         }
         if (!validSelectedVars.length) {
-          throw new Error('当前勾选中包含无效自变量，请重新勾选后再试');
+          throw new Error(t('invalidVar'));
         }
         state.modelResult = buildModel(state.processedRows, validSelectedVars, state.targetColumn || REQUIRED_TARGET_COL);
         renderEquation(state.modelResult);
         renderChart(state.modelResult);
-        showToast('success', '分析结果已生成');
+        showToast('success', t('analysisReady'));
       } catch (err) {
-        showToast('error', '建模失败：' + err.message);
+        showToast('error', t('buildFailed', { msg: err.message }));
       } finally {
         setLoading(false);
       }
     }
+
+
+    els.langTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      els.langMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!els.langMenu.contains(e.target) && e.target !== els.langTrigger) {
+        els.langMenu.classList.remove('open');
+      }
+    });
 
     els.importBtn.addEventListener('click', () => els.fileInput.click());
     els.fileInput.addEventListener('change', (e) => {
@@ -1235,6 +1602,7 @@
     els.toggleAllBtn.addEventListener('click', toggleAll);
     els.generateBtn.addEventListener('click', generateModel);
 
+    applyLanguage();
     renderTable();
     updateGenerateBtn();
     window.addEventListener('resize', () => {
